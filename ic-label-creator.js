@@ -32,7 +32,7 @@ function drawChip(chipName, series, type) {
   var numPins = Object.keys(chip.pins).length;
   var chipWidth = numPins / 2 * globals.pinDistance + 1;
   var chipHeightPins = ('heightPins' in chip) ? chip.heightPins : 3;
-  var chipHeight = chipHeightPins * globals.pinDistance;
+  var chipHeight = chipHeightPins * globals.chipHeightBase;
   
   var $page = $('#page');
   
@@ -163,6 +163,13 @@ function tweakChipName(chipName, family, series) {
   return chipName;
 }  
 
+// Add: helper to resolve pin font family (allows globals override)
+function getPinFontFamily() {
+  if (typeof globals !== 'undefined' && globals.pinFontFamily) {
+    return globals.pinFontFamily;
+  }
+  return '"Arial Narrow", "Helvetica Neue Condensed", "Roboto Condensed", Arial, "Liberation Sans Narrow", sans-serif';
+}
 
 /**
  * Draw a single pin on an IC.
@@ -181,7 +188,7 @@ function drawPin(pinData) {
         'text-decoration': pinData.activeLow ? 'overline' : '',
         'dominant-baseline': 'baseline',
         'text-anchor': 'start',
-        'font-family': 'sans-serif',
+        'font-family': getPinFontFamily(),            // changed
         'font-size': fontSize(pinData.pinName, pinData.chipHeightPins),
         style: 'transform: rotate(270deg) translate(-' + (pinData.chipHeight - .2) + 'mm, ' + (pinData.x + .6) + 'mm);',
       })
@@ -195,7 +202,7 @@ function drawPin(pinData) {
         'text-decoration': pinData.activeLow ? 'overline' : '',
         'dominant-baseline': 'baseline',
         'text-anchor': 'end',
-        'font-family': 'sans-serif',
+        'font-family': getPinFontFamily(),            // changed
         'font-size': fontSize(pinData.pinName, pinData.chipHeightPins),
         style: 'transform: rotate(270deg) translate(-.3mm, ' + (pinData.x + .7) + 'mm);',
       })
@@ -222,7 +229,7 @@ function fontSize(pinName, chipHeightPins) {
   }
   
   if (length <=3) {
-    return '1.4mm';
+    return '1.3mm';
   }
   
   return '1.1mm';

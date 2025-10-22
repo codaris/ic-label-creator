@@ -1,0 +1,285 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IC Label Creator — Ben Eater 6502 (Enhanced)</title>
+  <style>
+    :root {
+      --paper-zoom: 1;
+      --paper-bg: repeating-linear-gradient(
+        0deg,
+        #f8f8f8 0px,
+        #f8f8f8 9px,
+        #f0f0f0 9px,
+        #f0f0f0 10px
+      );
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: #111;
+      background: #fafafa;
+    }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: white; border-bottom: 1px solid #e5e5e5;
+    }
+    .toolbar {
+      display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+      padding: .75rem 1rem;
+    }
+    .toolbar label { font-size: .9rem; color: #333; }
+    .toolbar input[type="number"]{ width: 6rem; }
+    .toolbar .group { display: flex; gap: .5rem; align-items: center; }
+    .toolbar .spacer { flex: 1; }
+    .paper-wrap {
+      display: grid; place-items: start center;
+      min-height: calc(100dvh - 64px);
+      padding: 1.25rem;
+      background: var(--paper-bg);
+    }
+    .paper-shadow {
+      position: relative;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,.12)) drop-shadow(0 2px 4px rgba(0,0,0,.08));
+      transform-origin: top center;
+      transform: scale(var(--paper-zoom));
+      transition: transform .2s ease;
+    }
+    .paper {
+      background: white;
+      border: 1px solid #ddd;
+      position: relative;
+      overflow: hidden;
+    }
+    .paper::after {
+      /* print margin preview */
+      content: ""; position: absolute; pointer-events: none;
+      left: var(--margin-left-mm); right: var(--margin-right-mm);
+      top: var(--margin-top-mm); bottom: var(--margin-bottom-mm);
+      border: 1px dashed rgba(0,0,0,.15);
+    }
+    svg { display: block; }
+    footer {
+      padding: 1rem; font-size: .85rem; color: #555;
+    }
+    code.kbd {
+      padding: .15rem .35rem; border: 1px solid #ddd; border-radius: .35rem;
+      background: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: .9rem;
+    }
+    @media print {
+      header, .paper-wrap { display:none !important; }
+      .paper { border: none; filter: none; }
+    }
+  </style>
+  <script
+    src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+    crossorigin="anonymous"></script>
+
+  <!-- Your original project scripts -->
+  <script type="text/javascript" src="ic-label-creator.js"></script>
+  <script type="text/javascript" src="chips.js"></script>
+</head>
+<body>
+<header>
+  <div class="toolbar" role="region" aria-label="Layout controls">
+    <div class="group">
+      <label for="paperSelect"><strong>Paper</strong></label>
+      <select id="paperSelect">
+        <option value="A4">A4 — 210 × 297 mm</option>
+        <option value="Letter" selected>Letter — 215.9 × 279.4 mm</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <label><strong>Margins (mm)</strong></label>
+      <label>Top <input id="marginTop" type="number" min="0" step="0.1" value="10"></label>
+      <label>Right <input id="marginRight" type="number" min="0" step="0.1" value="10"></label>
+      <label>Bottom <input id="marginBottom" type="number" min="0" step="0.1" value="10"></label>
+      <label>Left <input id="marginLeft" type="number" min="0" step="0.1" value="10"></label>
+    </div>
+
+    <div class="group">
+      <label for="zoomRange"><strong>Zoom</strong></label>
+      <input id="zoomRange" type="range" min="0.5" max="2" step="0.05" value="1" />
+      <span id="zoomOut">−</span>
+      <span id="zoomVal">100%</span>
+      <span id="zoomIn">+</span>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="group">
+      <button id="resetLayout" type="button">Reset Layout</button>
+      <button id="printBtn" type="button">Print</button>
+    </div>
+  </div>
+</header>
+
+<main class="paper-wrap">
+  <div id="paperShadow" class="paper-shadow">
+    <div id="paper" class="paper">
+      <svg id="page"></svg>
+    </div>
+  </div>
+</main>
+
+<footer>
+  IC-Label Set "Ben Eater 6502 Breadboard Computer" • Enhanced preview, zoom, and page sizing.<br/>
+  Based on the original layout that renders into <code class="kbd">#page</code> and uses the global <code class="kbd">globals</code> object.
+</footer>
+
+<script>
+(function(){
+  // ---- page presets (in millimeters) ----
+  const PagePresets = {
+    A4:      { w: 210.0,  h: 297.0 },
+    Letter:  { w: 215.9,  h: 279.4 }
+  };
+
+  // ---- state ----
+  window.globals = window.globals || {};
+  const state = {
+    paper: 'Letter',
+    margins: { top: 10, right: 10, bottom: 10, left: 10 },
+    zoom: 1
+  };
+
+  // ---- helpers ----
+  function mm(v){ return `${v}mm`; }
+  function setCSSMargins() {
+    document.querySelector('.paper').style.setProperty('--margin-top-mm', mm(state.margins.top));
+    document.querySelector('.paper').style.setProperty('--margin-right-mm', mm(state.margins.right));
+    document.querySelector('.paper').style.setProperty('--margin-bottom-mm', mm(state.margins.bottom));
+    document.querySelector('.paper').style.setProperty('--margin-left-mm', mm(state.margins.left));
+  }
+  function setZoom(z) {
+    state.zoom = z;
+    document.documentElement.style.setProperty('--paper-zoom', z);
+    document.getElementById('zoomRange').value = z;
+    document.getElementById('zoomVal').textContent = Math.round(z * 100) + '%';
+  }
+
+  function pageContentWidth(){ return PagePresets[state.paper].w - state.margins.left - state.margins.right; }
+  function pageContentHeight(){ return PagePresets[state.paper].h - state.margins.top - state.margins.bottom; }
+
+  function applyPageSize() {
+    const preset = PagePresets[state.paper];
+    // outer "paper" size (full sheet for a realistic preview)
+    const paperDiv = document.getElementById('paper');
+    paperDiv.style.width = mm(preset.w);
+    paperDiv.style.height = mm(preset.h);
+
+    // inner SVG content area (printable region inside margins)
+    const svg = document.getElementById('page');
+    svg.setAttribute('width', mm(pageContentWidth()));
+    svg.setAttribute('height', mm(pageContentHeight()));
+    svg.style.position = 'absolute';
+    svg.style.left = mm(state.margins.left);
+    svg.style.top = mm(state.margins.top);
+
+    // sync original global variables expected by ic-label-creator.js
+    window.globals.pageWidth = pageContentWidth();
+    window.globals.pageHeight = pageContentHeight();
+  }
+
+  function clearPage(){
+    // remove all children from the SVG
+    const svg = document.getElementById('page');
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    // reset original globals for chip placement
+    window.globals.chipPositionX = 0;
+    window.globals.chipPositionY = 0;
+  }
+
+  function drawAllChips(){
+    if (typeof window.drawChip !== 'function') {
+      console.warn('drawChip(...) not found. Ensure ic-label-creator.js is loaded.');
+      return;
+    }
+    // This sequence mirrors the original demo contents.
+    window.drawChip('555');
+    window.drawChip('555');
+    window.drawChip('555');
+    window.drawChip('74LS04');
+    window.drawChip('74LS08');
+    window.drawChip('74LS32');
+    window.drawChip('74LS00');
+    window.drawChip('W65C02');
+    window.drawChip('W65C22');
+    window.drawChip('28C256');
+    window.drawChip('62256');
+    window.drawChip('W65C51');
+  }
+
+  function render(){
+    applyPageSize();
+    setCSSMargins();
+    clearPage();
+    drawAllChips();
+  }
+
+  // ---- initialize default globals expected by the original code ----
+  Object.assign(window.globals, {
+    gimmeColor      : true,
+    pageWidth       : 210 - 20, // will be overridden by applyPageSize()
+    pageHeight      : 279.4 - 40,
+    pinDistance     : 2.54,
+    chipHeightBase  : 2,
+    chipPositionX   : 0,
+    chipPositionY   : 0,
+    svgStrokeWidth  : .1,
+    svgStrokeOffset : .1,
+    defaultChipLogicFamily : 'LS',
+    defaultChipSeries      : '74'
+  });
+
+  // ---- UI bindings ----
+  const $paper = document.getElementById('paperSelect');
+  const $mt = document.getElementById('marginTop');
+  const $mr = document.getElementById('marginRight');
+  const $mb = document.getElementById('marginBottom');
+  const $ml = document.getElementById('marginLeft');
+  const $zoom = document.getElementById('zoomRange');
+  const $zoomIn = document.getElementById('zoomIn');
+  const $zoomOut = document.getElementById('zoomOut');
+  const $reset = document.getElementById('resetLayout');
+  const $print = document.getElementById('printBtn');
+
+  $paper.addEventListener('change', () => {
+    state.paper = $paper.value;
+    render();
+  });
+  for (const [el, key] of [[ $mt, 'top'], [$mr, 'right'], [$mb, 'bottom'], [$ml, 'left']]){
+    el.addEventListener('input', () => {
+      state.margins[key] = parseFloat(el.value) || 0;
+      render();
+    });
+  }
+  $zoom.addEventListener('input', () => { setZoom(parseFloat($zoom.value)); });
+  $zoomIn.addEventListener('click', () => setZoom(Math.min(2, Math.round((state.zoom + 0.1)*100)/100)));
+  $zoomOut.addEventListener('click', () => setZoom(Math.max(0.5, Math.round((state.zoom - 0.1)*100)/100)));
+
+  $reset.addEventListener('click', () => {
+    state.paper = 'Letter';
+    state.margins = { top: 10, right: 10, bottom: 10, left: 10 };
+    $paper.value = state.paper;
+    $mt.value = state.margins.top; $mr.value = state.margins.right;
+    $mb.value = state.margins.bottom; $ml.value = state.margins.left;
+    setZoom(1);
+    render();
+  });
+
+  $print.addEventListener('click', () => window.print());
+
+  // First paint
+  setZoom(1);
+  render();
+})();
+</script>
+</body>
+</html>
