@@ -131,6 +131,22 @@
         `,
     };
 
+    // Pin type color palette (easy to modify). Each entry maps a semantic pin type to a color.
+    // Both the pin label text and the indicator rectangle use this color.
+    const PIN_TYPE_COLOR_PALETTE = [
+        { type: 'power', color: '#d32f2f' },      // red
+        { type: 'ground', color: '#000000' },     // black
+        { type: 'address', color: '#2e7d32' },    // green
+        { type: 'data', color: '#1565c0' },       // blue
+        { type: 'clock', color: '#ef6c00' },      // amber/orange for good contrast
+        { type: 'chip-select', color: '#6a1b9a' },// purple
+        { type: 'reset', color: '#c2185b' },      // crimson (extra common control)
+        { type: 'enable', color: '#00796b' },     // teal (extra control)
+        { type: 'interrupt', color: '#d81b60' },  // magenta (extra control)
+        { type: 'nc', color: '#757575' },         // no-connect, gray
+        { type: 'other', color: '#000000' },      // fallback/other
+    ];
+
     // ============================================================================
     // UTILITY FUNCTIONS
     // ============================================================================
@@ -271,6 +287,10 @@
         const yOffset = side === 'bottom' ? 0.5 : 0.6;
         const yPos = Math.min(x + yOffset, Math.max(0, chipWidth - edgeMargin));
 
+        // Randomly pick a pin type (temporary) and derive its color
+        const pinTypeDef = PIN_TYPE_COLOR_PALETTE[Math.floor(Math.random() * PIN_TYPE_COLOR_PALETTE.length)];
+        const pinColor = pinTypeDef.color;
+
         // Draw pin-direction indicator on chip edge
         const squareWidth = 0.8; // mm - width of indicator
         const squareHeight = 0.4; // mm - half-height for subtlety
@@ -292,8 +312,8 @@
                 y: squareY + 'mm',
                 width: squareWidth + 'mm',
                 height: squareHeight + 'mm',
-                fill: pinMode === 'output' ? 'black' : 'white',
-                stroke: 'black',
+                fill: pinMode === 'output' ? pinColor : 'white',
+                stroke: pinColor,
                 'stroke-width': '0.1mm'
             });
 
@@ -308,7 +328,7 @@
                     y: squareY + 'mm',
                     width: (squareWidth / 2) + 'mm',
                     height: squareHeight + 'mm',
-                    fill: 'black',
+                    fill: pinColor,
                     stroke: 'none'
                 });
             svgChip.append(halfFill);
@@ -340,6 +360,7 @@
                 'text-anchor': side === 'bottom' ? 'start' : 'end',
                 'font-family': getPinFontFamily(config.pinFontFamily),
                 'font-size': fontSize,
+                fill: pinColor,
                 style: side === 'bottom'
                     ? `transform: rotate(270deg) translate(-${textOffsetBottom}mm, ${yPosAdjusted}mm);`
                     : `transform: rotate(270deg) translate(-${textOffsetTop}mm, ${yPosAdjusted}mm);`,
@@ -700,8 +721,6 @@
             };
 
             updatePrintPageSize(this._paper);
-
-            // Render chips
             clearPage();
             const chipElements = this.querySelectorAll('ic-chip');
             chipElements.forEach(chip => {
