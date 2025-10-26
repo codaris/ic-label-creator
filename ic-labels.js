@@ -271,12 +271,14 @@
         const yOffset = side === 'bottom' ? 0.5 : 0.6;
         const yPos = Math.min(x + yOffset, Math.max(0, chipWidth - edgeMargin));
 
-        // Draw input/output indicator square on chip edge
+        // Draw pin-direction indicator on chip edge
         const squareWidth = 0.8; // mm - width of indicator
         const squareHeight = 0.4; // mm - half-height for subtlety
         const squareMargin = 0.3; // mm - gap between square and text
-        // Randomly determine if pin is output (filled) or input (unfilled)
-        const isOutput = Math.random() > 0.5;
+        // Randomly determine pin mode for now: input (unfilled), output (filled), bidirectional (half-filled)
+        const rand = Math.random();
+        /** @type {'input'|'output'|'bidirectional'} */
+        const pinMode = rand < 0.33 ? 'input' : (rand < 0.66 ? 'output' : 'bidirectional');
 
         // Position rectangle at the edge, centered on the pin position
         // The pin is at position x, so center the rectangle on that position
@@ -284,18 +286,33 @@
         const squareY = side === 'bottom' ? chipHeight - squareHeight : 0;
 
         // @ts-ignore - jQuery
-        const pinSquare = $(document.createElementNS("http://www.w3.org/2000/svg", 'rect'))
+        const baseRect = $(document.createElementNS("http://www.w3.org/2000/svg", 'rect'))
             .attr({
                 x: squareX + 'mm',
                 y: squareY + 'mm',
                 width: squareWidth + 'mm',
                 height: squareHeight + 'mm',
-                fill: isOutput ? 'black' : 'white',
+                fill: pinMode === 'output' ? 'black' : 'white',
                 stroke: 'black',
                 'stroke-width': '0.1mm'
             });
 
-        svgChip.append(pinSquare);
+        svgChip.append(baseRect);
+
+        // For bidirectional pins, overlay half the rectangle as filled
+        if (pinMode === 'bidirectional') {
+            // @ts-ignore - jQuery
+            const halfFill = $(document.createElementNS("http://www.w3.org/2000/svg", 'rect'))
+                .attr({
+                    x: squareX + 'mm',
+                    y: squareY + 'mm',
+                    width: (squareWidth / 2) + 'mm',
+                    height: squareHeight + 'mm',
+                    fill: 'black',
+                    stroke: 'none'
+                });
+            svgChip.append(halfFill);
+        }
 
         // Calculate text position with margin from rectangle
         // Bottom: text starts at bottom edge, moves up (so translate needs more negative value)
