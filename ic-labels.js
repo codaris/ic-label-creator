@@ -19,10 +19,10 @@
     /** @typedef {{top:number, right:number, bottom:number, left:number}} Margins */
     /** @typedef {{paper:'A4'|'Letter', margins:Margins, zoom:number}} UIState */
     /** @typedef {{
-     *  pageWidth:number,
+     * pageWidth:number,
      *  pageHeight:number,
      *  pinDistance:number,
-     *  chipHeightBase:number,
+     *  heightSizeAdjust:number,
      *  chipPositionX:number,
      *  chipPositionY:number,
      *  svgStrokeWidth:number,
@@ -33,6 +33,22 @@
      *  pinFontFamily?:string
      * }} RenderConfig */
     /** @typedef {{defaultChipLogicFamily:string, defaultChipSeries:string}} ChipNameDefaults */
+    /** @typedef {{ pins:number, pinPitch:number, rowSpacing?:number, bodyLength?:number, bodyWidth?:number }} Package */
+    /** @typedef {Record<string, Package>} PackageRegistry */
+    /** @typedef {'gate'|'flipflop'|'demux'|'mux'|'counter'|'register'|'ram'|'sram'|'eeprom'|'buffer'|'bus-transceiver'|'cpu'|'via'|'acia'|'analog'|'adder'} ChipType */
+    /** @typedef {{ description:string, type:ChipType, package?:string, pins: Record<string,string> }} Chip */
+    /** @typedef {Record<string, Chip>} ChipRegistry */
+    /** @typedef {Window & { chips?: ChipRegistry, packages?: PackageRegistry }} ICWindow */
+    /** @typedef {'top'|'bottom'} PinSide */
+    /** @typedef {{
+     *  svgChip: { append: (el: Element) => void },
+     *  pinName: string,
+     *  side: PinSide,
+     *  x: number,
+     *  chipHeight: number,
+     *  chipWidth: number,
+     *  pinFontFamily?: string
+     * }} PinRenderConfig */
 
 
 
@@ -191,9 +207,9 @@
         return '"Arial Narrow", "Helvetica Neue Condensed", "Roboto Condensed", Arial, "Liberation Sans Narrow", sans-serif';
     }
 
-    /** Calculate font size based on pin name length */
-    function calculatePinFontSize(/** @type {string} */ pinName, /** @type {number} */ chipHeightPins) {
-        if (chipHeightPins > 3) return '1.6mm';
+    /** Calculate font size based on pin name length and chip height (mm) */
+    function calculatePinFontSize(/** @type {string} */ pinName, /** @type {number} */ chipHeightMm) {
+        if (chipHeightMm >= 8) return '1.6mm';
 
         // Count characters excluding overline multibyte markers
         const uriEncoded = encodeURIComponent(pinName);
@@ -206,7 +222,7 @@
     }
 
     /** Determine chip label color based on type */
-    function getChipColor(/** @type {string} */ chipType, /** @type {boolean} */ gimmeColor) {
+    function getChipColor(/** @type {ChipType} */ chipType, /** @type {boolean} */ gimmeColor) {
         if (gimmeColor === false) return 'black';
 
         /** @type {Record<string, string>} */
@@ -223,10 +239,10 @@
 
     /** Adjust chip name with series and logic family */
     function adjustChipName(
-    /** @type {string} */ chipName,
-    /** @type {string|undefined} */ family,
-    /** @type {string|undefined} */ series,
-    /** @type {ChipNameDefaults} */ defaults
+        /** @type {string} */ chipName,
+        /** @type {string|undefined} */ family,
+        /** @type {string|undefined} */ series,
+        /** @type {ChipNameDefaults} */ defaults
     ) {
         if (family === undefined) {
             family = defaults.defaultChipLogicFamily || 'LS';
@@ -238,9 +254,9 @@
     }
 
     /** Draw a single pin on the chip SVG */
-    function renderPin(/** @type {any} */ config) {
+    function renderPin(/** @type {PinRenderConfig} */ config) {
         // @ts-ignore - jQuery is loaded globally
-        const { svgChip, pinName: rawPinName, side, x, chipHeight, chipHeightPins } = config;
+        const { svgChip, pinName: rawPinName, side, x, chipHeight, chipWidth } = config;
 
         let pinName = rawPinName;
         let activeLow = false;
@@ -249,6 +265,11 @@
             activeLow = true;
             pinName = pinName.substring(1);
         }
+
+        // Clamp label position slightly away from right edge
+        const edgeMargin = 0.8; // mm
+        const yOffset = side === 'bottom' ? 0.5 : 0.6;
+        const yPos = Math.min(x + yOffset, Math.max(0, chipWidth - edgeMargin));
 
         // @ts-ignore - jQuery
         const pinText = $(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
@@ -260,10 +281,10 @@
                 'dominant-baseline': 'baseline',
                 'text-anchor': side === 'bottom' ? 'start' : 'end',
                 'font-family': getPinFontFamily(config.pinFontFamily),
-                'font-size': calculatePinFontSize(pinName, chipHeightPins),
+                'font-size': calculatePinFontSize(pinName, chipHeight),
                 style: side === 'bottom'
-                    ? `transform: rotate(270deg) translate(-${chipHeight - 0.2}mm, ${x + 0.6}mm);`
-                    : `transform: rotate(270deg) translate(-0.3mm, ${x + 0.7}mm);`,
+                    ? `transform: rotate(270deg) translate(-${chipHeight - 0.2}mm, ${yPos}mm);`
+                    : `transform: rotate(270deg) translate(-0.3mm, ${yPos}mm);`,
             });
 
         svgChip.append(pinText);
@@ -280,22 +301,37 @@
         // Show effective family/series (defaults applied) in the console
         const effFamily = family ?? config.defaultChipLogicFamily;
         const effSeries = series ?? config.defaultChipSeries;
-        // @ts-ignore - jQuery and chips are loaded globally
         console.log('Drawing chip:', chipName, effFamily, effSeries);
 
-        // @ts-ignore - chips defined in chips.js
-        const chip = window.chips && window.chips[chipName];
+        /** @type {ICWindow} */
+        const W = /** @type {ICWindow} */ (window);
+        const chipRegistry = W.chips;
+        const chip = chipRegistry ? chipRegistry[chipName] : undefined;
 
         if (!chip) {
             alert(`Error: unknown chip "${chipName}". Please check spelling or add pinout to chips.js.`);
             return;
         }
 
-        // Calculate chip dimensions
-        const numPins = Object.keys(chip.pins).length;
-        const chipWidth = numPins / 2 * config.pinDistance + 1;
-        const chipHeightPins = chip.heightPins || 3;
-        const chipHeight = chipHeightPins * config.chipHeightBase;
+        // Resolve package information (from chips.js)
+        const pkgName = chip.package;
+        const pkgRegistry = W.packages;
+        const pkg = (pkgRegistry && pkgName) ? pkgRegistry[pkgName] : undefined;
+
+        // Calculate chip dimensions using package dimensions when available
+        const numPins = (pkg && pkg.pins) ? pkg.pins : Object.keys(chip.pins).length;
+        const pitch = (pkg && pkg.pinPitch) ? pkg.pinPitch : config.pinDistance;
+        const chipWidth = (pkg && pkg.bodyLength)
+            ? pkg.bodyLength
+            : Math.max(pitch, ((numPins / 2 - 1) * pitch));
+        // Determine base body width from package (prefer bodyWidth, fall back to rowSpacing), else default 7.62mm
+        let baseBodyWidth = 7.62;
+        if (pkg) {
+            if (typeof pkg.bodyWidth === 'number') baseBodyWidth = pkg.bodyWidth;
+            else if (typeof pkg.rowSpacing === 'number') baseBodyWidth = pkg.rowSpacing;
+        }
+        const chipHeightRaw = baseBodyWidth;
+        const chipHeight = Math.max(1, chipHeightRaw - (config.heightSizeAdjust || 0));
 
         // @ts-ignore - jQuery
         const svgChip = $(document.createElementNS("http://www.w3.org/2000/svg", 'svg')).attr({
@@ -350,9 +386,13 @@
         );
 
         // Draw all pins
-        let pinX = config.pinDistance / 2 + 0.5;
+        // Center pin train along chip length so edge spacing looks consistent across packages
+        const pinsPerSide = numPins / 2;
+        const trackLen = (pinsPerSide - 1) * pitch; // distance between first/last pin centers
+        const leftPad = Math.max(0, (chipWidth - trackLen) / 2);
+        let pinX = leftPad;
         // @ts-ignore - jQuery
-        $.each(chip.pins, function (/** @type {any} */ pinNum, /** @type {any} */ pinName) {
+        $.each(chip.pins, function (/** @type {string} */ pinNum, /** @type {string} */ pinName) {
             const pinNumber = parseInt(String(pinNum), 10);
 
             if (pinNumber <= numPins / 2) {
@@ -363,20 +403,20 @@
                     side: 'bottom',
                     x: pinX,
                     chipHeight,
-                    chipHeightPins,
+                    chipWidth,
                     pinFontFamily: config.pinFontFamily,
                 });
-                pinX += config.pinDistance;
+                pinX += pitch;
             } else {
                 // Top side pins
-                pinX -= config.pinDistance;
+                pinX -= pitch;
                 renderPin({
                     svgChip,
                     pinName,
                     side: 'top',
                     x: pinX,
                     chipHeight,
-                    chipHeightPins,
+                    chipWidth,
                     pinFontFamily: config.pinFontFamily,
                 });
             }
@@ -421,7 +461,7 @@
         /** @type {'A4'|'Letter'} */ _paper = 'Letter';
         /** @type {Margins} */ _margins = { ...CONFIG.DEFAULT_MARGINS };
         /** @type {number} */ _pinDistance = 2.54;
-        /** @type {number} */ _chipHeightBase = 2;
+        /** @type {number} */ _heightSizeAdjust = 0;
         /** @type {number} */ _svgStrokeWidth = 0.1;
         /** @type {number} */ _svgStrokeOffset = 0.1;
         /** @type {string} */ _defaultChipLogicFamily = 'LS';
@@ -438,7 +478,7 @@
         static get observedAttributes() {
             return [
                 'paper', 'margins',
-                'pindistance', 'chipheightbase', 'svgstrokewidth', 'svgstrokeoffset',
+                'pindistance', 'heightsizeadjust', 'svgstrokewidth', 'svgstrokeoffset',
                 'defaultchiplogicfamily', 'defaultchipseries', 'gimmecolor', 'pinfontfamily',
             ];
         }
@@ -454,9 +494,9 @@
                 const v = parseFloat(String(newVal || ''));
                 if (!Number.isNaN(v)) this._pinDistance = v;
                 this._scheduleRender();
-            } else if (name === 'chipheightbase') {
+            } else if (name === 'heightsizeadjust') {
                 const v = parseFloat(String(newVal || ''));
-                if (!Number.isNaN(v)) this._chipHeightBase = v;
+                if (!Number.isNaN(v)) this._heightSizeAdjust = v;
                 this._scheduleRender();
             } else if (name === 'svgstrokewidth') {
                 const v = parseFloat(String(newVal || ''));
@@ -506,7 +546,7 @@
                 return d;
             };
             this._pinDistance = n(readAttr('pinDistance'), this._pinDistance);
-            this._chipHeightBase = n(readAttr('chipHeightBase'), this._chipHeightBase);
+            this._heightSizeAdjust = n(readAttr('heightSizeAdjust'), this._heightSizeAdjust);
             this._svgStrokeWidth = n(readAttr('svgStrokeWidth'), this._svgStrokeWidth);
             this._svgStrokeOffset = n(readAttr('svgStrokeOffset'), this._svgStrokeOffset);
             this._defaultChipLogicFamily = String(readAttr('defaultChipLogicFamily') ?? this._defaultChipLogicFamily);
@@ -590,7 +630,7 @@
                 pageWidth: contentW,
                 pageHeight: contentH,
                 pinDistance: this._pinDistance,
-                chipHeightBase: this._chipHeightBase,
+                heightSizeAdjust: this._heightSizeAdjust,
                 chipPositionX: 0,
                 chipPositionY: 0,
                 svgStrokeWidth: this._svgStrokeWidth,
