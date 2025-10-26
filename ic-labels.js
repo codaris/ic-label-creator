@@ -154,28 +154,7 @@
     };
   }
 
-  // ============================================================================
-  // LEGACY GLOBALS INITIALIZATION
-  // ============================================================================
-
-  function initializeGlobalState() {
-    // @ts-ignore - dynamic injection for legacy compatibility
-    if (!window.globals) window.globals = {};
-    
-    /** @type {any} */
-    const g = window.globals;
-    
-    // Set defaults if not already present
-    if (typeof g.gimmeColor === 'undefined') g.gimmeColor = true;
-    if (typeof g.pinDistance === 'undefined') g.pinDistance = 2.54;
-    if (typeof g.chipHeightBase === 'undefined') g.chipHeightBase = 2;
-    if (typeof g.chipPositionX === 'undefined') g.chipPositionX = 0;
-    if (typeof g.chipPositionY === 'undefined') g.chipPositionY = 0;
-    if (typeof g.svgStrokeWidth === 'undefined') g.svgStrokeWidth = 0.1;
-    if (typeof g.svgStrokeOffset === 'undefined') g.svgStrokeOffset = 0.1;
-    if (typeof g.defaultChipLogicFamily === 'undefined') g.defaultChipLogicFamily = 'LS';
-    if (typeof g.defaultChipSeries === 'undefined') g.defaultChipSeries = '74';
-  }
+  // (Removed legacy window.globals initialization; configuration now lives on <ic-labels> attributes)
 
   // ============================================================================
   // CHIP RENDERING ENGINE (Legacy compatible)
@@ -187,20 +166,11 @@
     if (svg) {
       while (svg.firstChild) svg.removeChild(svg.firstChild);
     }
-    // @ts-ignore
-    if (window.globals) {
-      window.globals.chipPositionX = 0;
-      window.globals.chipPositionY = 0;
-    }
   }
 
-  /** Get pin font family (allows global override) */
-  function getPinFontFamily() {
-    // @ts-ignore
-    if (typeof window.globals !== 'undefined' && window.globals.pinFontFamily) {
-      // @ts-ignore
-      return window.globals.pinFontFamily;
-    }
+  /** Get pin font family (allows override) */
+  function getPinFontFamily(/** @type {string|undefined|null} */ override) {
+    if (override && String(override).trim().length > 0) return String(override);
     return '"Arial Narrow", "Helvetica Neue Condensed", "Roboto Condensed", Arial, "Liberation Sans Narrow", sans-serif';
   }
 
@@ -219,11 +189,8 @@
   }
 
   /** Determine chip label color based on type */
-  function getChipColor(/** @type {string} */ chipType) {
-    // @ts-ignore
-    if (window.globals && window.globals.gimmeColor === false) {
-      return 'black';
-    }
+  function getChipColor(/** @type {string} */ chipType, /** @type {boolean} */ gimmeColor) {
+    if (gimmeColor === false) return 'black';
     
     /** @type {Record<string, string>} */
     const colorMap = {
@@ -238,17 +205,18 @@
   }
 
   /** Adjust chip name with series and logic family */
-  function adjustChipName(/** @type {string} */ chipName, /** @type {string|undefined} */ family, /** @type {string|undefined} */ series) {
-    // @ts-ignore
-    const g = window.globals || {};
-    
+  function adjustChipName(
+    /** @type {string} */ chipName,
+    /** @type {string|undefined} */ family,
+    /** @type {string|undefined} */ series,
+    /** @type {{defaultChipLogicFamily:string, defaultChipSeries:string}} */ defaults
+  ) {
     if (family === undefined) {
-      family = g.defaultChipLogicFamily || 'LS';
+      family = defaults.defaultChipLogicFamily || 'LS';
     }
     if (series === undefined) {
-      series = g.defaultChipSeries || '74';
+      series = defaults.defaultChipSeries || '74';
     }
-    
     return chipName.replace(/^74LS/, series + family);
   }
 
@@ -274,7 +242,7 @@
         'text-decoration': activeLow ? 'overline' : '',
         'dominant-baseline': 'baseline',
         'text-anchor': side === 'bottom' ? 'start' : 'end',
-        'font-family': getPinFontFamily(),
+        'font-family': getPinFontFamily(config.pinFontFamily),
         'font-size': calculatePinFontSize(pinName, chipHeightPins),
         style: side === 'bottom'
           ? `transform: rotate(270deg) translate(-${chipHeight - 0.2}mm, ${x + 0.6}mm);`
@@ -289,21 +257,19 @@
    * @param {string} chipName - Name of the chip (must exist in chips.js)
    * @param {string} [series] - Series (e.g., '74', '54')
    * @param {string} [type] - Logic family (e.g., 'LS', 'HC')
+  * @param {any} [g] - Rendering configuration (dimensions, spacing, fonts)
    */
-  function drawChip(chipName, series, type) {
+  function drawChip(chipName, series, type, /** @type {any} */ g = {}) {
     // @ts-ignore - jQuery and chips are loaded globally
     console.log('Drawing chip:', chipName, type, series);
     
-    // @ts-ignore - chips defined in chips.js
+  // @ts-ignore - chips defined in chips.js
     const chip = window.chips && window.chips[chipName];
     
     if (!chip) {
       alert(`Error: unknown chip "${chipName}". Please check spelling or add pinout to chips.js.`);
       return;
     }
-    
-    // @ts-ignore
-    const g = window.globals;
     
     // Calculate chip dimensions
     const numPins = Object.keys(chip.pins).length;
@@ -341,7 +307,10 @@
     }));
     
     // Draw chip label (model + description)
-    const displayName = adjustChipName(chipName, series, type);
+    const displayName = adjustChipName(chipName, series, type, {
+      defaultChipLogicFamily: g.defaultChipLogicFamily,
+      defaultChipSeries: g.defaultChipSeries,
+    });
     const labelFontSize = chipHeight * 0.5;
     
     // @ts-ignore - jQuery
@@ -355,7 +324,7 @@
         'font-family': 'Times New Roman, serif',
         'font-size': labelFontSize + 'mm',
         'font-weight': 'bold',
-        fill: getChipColor(chip.type),
+        fill: getChipColor(chip.type, g.gimmeColor),
         'fill-opacity': 0.3
       })
     );
@@ -375,6 +344,7 @@
           x: pinX,
           chipHeight,
           chipHeightPins,
+          pinFontFamily: g.pinFontFamily,
         });
         pinX += g.pinDistance;
       } else {
@@ -387,6 +357,7 @@
           x: pinX,
           chipHeight,
           chipHeightPins,
+          pinFontFamily: g.pinFontFamily,
         });
       }
     });
@@ -404,9 +375,7 @@
     }
   }
 
-  // Export drawChip globally for component to use
-  // @ts-ignore
-  window.drawChip = drawChip;
+  // drawChip is used internally by the web component; no global export required
 
   // ============================================================================
   // WEB COMPONENTS
@@ -431,6 +400,15 @@
   class ICLabelsElement extends HTMLElement {
     /** @type {'A4'|'Letter'} */ _paper = 'Letter';
     /** @type {Margins} */ _margins = { ...CONFIG.DEFAULT_MARGINS };
+    /** Rendering config (replaces window.globals) */
+    /** @type {number} */ _pinDistance = 2.54;
+    /** @type {number} */ _chipHeightBase = 2;
+    /** @type {number} */ _svgStrokeWidth = 0.1;
+    /** @type {number} */ _svgStrokeOffset = 0.1;
+    /** @type {string} */ _defaultChipLogicFamily = 'LS';
+    /** @type {string} */ _defaultChipSeries = '74';
+    /** @type {boolean} */ _gimmeColor = true;
+    /** @type {string|undefined} */ _pinFontFamily = undefined;
     /** @type {HTMLDivElement|null} */ _wrap = null;
     /** @type {HTMLDivElement|null} */ _shadowDiv = null;
     /** @type {HTMLDivElement|null} */ _paperDiv = null;
@@ -439,7 +417,11 @@
     /** @type {number|null} */ _renderTimer = null;
 
     static get observedAttributes() {
-      return ['paper', 'margins'];
+      return [
+        'paper', 'margins',
+        'pindistance', 'chipheightbase', 'svgstrokewidth', 'svgstrokeoffset',
+        'defaultchiplogicfamily', 'defaultchipseries', 'gimmecolor', 'pinfontfamily',
+      ];
     }
 
     attributeChangedCallback(/** @type {string} */ name, /** @type {string|null} */ _oldVal, /** @type {string|null} */ newVal) {
@@ -449,17 +431,70 @@
       } else if (name === 'margins') {
         this._margins = parseMargins(newVal, this._margins);
         this._scheduleRender();
+      } else if (name === 'pindistance') {
+        const v = parseFloat(String(newVal || ''));
+        if (!Number.isNaN(v)) this._pinDistance = v;
+        this._scheduleRender();
+      } else if (name === 'chipheightbase') {
+        const v = parseFloat(String(newVal || ''));
+        if (!Number.isNaN(v)) this._chipHeightBase = v;
+        this._scheduleRender();
+      } else if (name === 'svgstrokewidth') {
+        const v = parseFloat(String(newVal || ''));
+        if (!Number.isNaN(v)) this._svgStrokeWidth = v;
+        this._scheduleRender();
+      } else if (name === 'svgstrokeoffset') {
+        const v = parseFloat(String(newVal || ''));
+        if (!Number.isNaN(v)) this._svgStrokeOffset = v;
+        this._scheduleRender();
+      } else if (name === 'defaultchiplogicfamily') {
+        this._defaultChipLogicFamily = String(newVal || 'LS');
+        this._scheduleRender();
+      } else if (name === 'defaultchipseries') {
+        this._defaultChipSeries = String(newVal || '74');
+        this._scheduleRender();
+      } else if (name === 'gimmecolor') {
+        const s = (newVal ?? '').toLowerCase();
+        // truthy unless explicitly false/0
+        this._gimmeColor = !(s === 'false' || s === '0' || s === 'no');
+        this._scheduleRender();
+      } else if (name === 'pinfontfamily') {
+        const v = newVal == null ? undefined : String(newVal);
+        this._pinFontFamily = v && v.trim().length ? v : undefined;
+        this._scheduleRender();
       }
     }
 
     connectedCallback() {
       injectCSS(CONFIG.STYLE_ID, STYLES.COMPONENT);
-      initializeGlobalState();
       
       // Read initial attributes
       const paperAttr = this.getAttribute('paper') || 'Letter';
       this._paper = (paperAttr === 'A4' ? 'A4' : 'Letter');
       this._margins = parseMargins(this.getAttribute('margins'), this._margins);
+      // Read optional rendering attributes (support camelCase and lowercase)
+  /** @type {(name: string) => (string|null)} */
+  const readAttr = (name) => this.getAttribute(name) ?? this.getAttribute(name.toLowerCase());
+  /** @type {(s: string|null|undefined, d: number) => number} */
+  const n = (s, d) => { const v = parseFloat(String(s ?? '')); return Number.isNaN(v) ? d : v; };
+  /** @type {(s: string|null|undefined, d: boolean) => boolean} */
+  const b = (s, d) => {
+        if (s == null) return d;
+        const v = String(s).toLowerCase();
+        if (v === '' ) return true; // presence-only boolean
+        if (v === 'false' || v === '0' || v === 'no') return false;
+        if (v === 'true' || v === '1' || v === 'yes') return true;
+        return d;
+      };
+      this._pinDistance = n(readAttr('pinDistance'), this._pinDistance);
+      this._chipHeightBase = n(readAttr('chipHeightBase'), this._chipHeightBase);
+      this._svgStrokeWidth = n(readAttr('svgStrokeWidth'), this._svgStrokeWidth);
+      this._svgStrokeOffset = n(readAttr('svgStrokeOffset'), this._svgStrokeOffset);
+      this._defaultChipLogicFamily = String(readAttr('defaultChipLogicFamily') ?? this._defaultChipLogicFamily);
+      this._defaultChipSeries = String(readAttr('defaultChipSeries') ?? this._defaultChipSeries);
+      this._gimmeColor = b(readAttr('gimmeColor'), this._gimmeColor);
+      const pff = readAttr('pinFontFamily');
+      this._pinFontFamily = pff && String(pff).trim().length ? String(pff) : undefined;
 
       // Build DOM structure (light DOM for jQuery compatibility)
       this._wrap = document.createElement('div');
@@ -530,11 +565,21 @@
       this._svg.style.left = mm(this._margins.left);
       this._svg.style.top = mm(this._margins.top);
 
-      // Update globals for legacy rendering
-      // @ts-ignore
-      window.globals.pageWidth = contentW;
-      // @ts-ignore
-      window.globals.pageHeight = contentH;
+      // Build rendering configuration (replaces window.globals)
+      const g = {
+        pageWidth: contentW,
+        pageHeight: contentH,
+        pinDistance: this._pinDistance,
+        chipHeightBase: this._chipHeightBase,
+        chipPositionX: 0,
+        chipPositionY: 0,
+        svgStrokeWidth: this._svgStrokeWidth,
+        svgStrokeOffset: this._svgStrokeOffset,
+        defaultChipLogicFamily: this._defaultChipLogicFamily,
+        defaultChipSeries: this._defaultChipSeries,
+        gimmeColor: this._gimmeColor,
+        pinFontFamily: this._pinFontFamily,
+      };
       
       updatePrintPageSize(this._paper);
 
@@ -547,11 +592,7 @@
         
         const count = Math.max(1, Math.floor(Number(chip.getAttribute('count')) || 1));
         for (let i = 0; i < count; i++) {
-          // @ts-ignore
-          if (typeof window.drawChip === 'function') {
-            // @ts-ignore
-            window.drawChip(chipName);
-          }
+          drawChip(chipName, undefined, undefined, g);
         }
       });
     }
