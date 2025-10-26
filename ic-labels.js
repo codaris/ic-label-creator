@@ -36,13 +36,16 @@
     /** @typedef {{ pins:number, pinPitch:number, rowSpacing?:number, bodyLength?:number, bodyWidth?:number }} Package */
     /** @typedef {Record<string, Package>} PackageRegistry */
     /** @typedef {'gate'|'flipflop'|'demux'|'mux'|'counter'|'register'|'ram'|'sram'|'eeprom'|'buffer'|'bus-transceiver'|'cpu'|'via'|'acia'|'analog'|'adder'} ChipType */
-    /** @typedef {{ description:string, type:ChipType, package?:string, pins: Record<string,string> }} Chip */
+    /** @typedef {'input'|'output'|'bidirectional'} PinDirection */
+    /** @typedef {'power'|'ground'|'address'|'data'|'clock'|'chip-select'|'reset'|'enable'|'interrupt'|'nc'|'other'} PinType */
+    /** @typedef {[string, PinDirection, PinType]} PinSpec */
+    /** @typedef {{ description:string, type:ChipType, package?:string, pins: Record<string, string | PinSpec> }} Chip */
     /** @typedef {Record<string, Chip>} ChipRegistry */
     /** @typedef {Window & { chips?: ChipRegistry, packages?: PackageRegistry }} ICWindow */
     /** @typedef {'top'|'bottom'} PinSide */
     /** @typedef {{
      *  svgChip: { append: (el: Element) => void },
-     *  pinName: string,
+     *  pinData: string | PinSpec,
      *  side: PinSide,
      *  x: number,
      *  chipHeight: number,
@@ -142,7 +145,7 @@
         { type: 'chip-select', color: '#6a1b9a' },// purple
         { type: 'reset', color: '#c2185b' },      // crimson (extra common control)
         { type: 'enable', color: '#00796b' },     // teal (extra control)
-        { type: 'interrupt', color: '#d81b60' },  // magenta (extra control)
+        { type: 'interrupt', color: '#a73a62ff' },  // magenta (extra control)
         { type: 'nc', color: '#757575' },         // no-connect, gray
         { type: 'other', color: '#000000' },      // fallback/other
     ];
@@ -272,11 +275,24 @@
     /** Draw a single pin on the chip SVG */
     function renderPin(/** @type {PinRenderConfig} */ config) {
         // @ts-ignore - jQuery is loaded globally
-        const { svgChip, pinName: rawPinName, side, x, chipHeight, chipWidth } = config;
+        const { svgChip, pinData, side, x, chipHeight, chipWidth } = config;
 
-        let pinName = rawPinName;
+        // Parse pin data: can be string (old format) or [label, direction, type] (new format)
+        let pinName, pinMode, pinType;
+        if (Array.isArray(pinData)) {
+            // New format: [label, direction, type]
+            const [label, direction, type] = pinData;
+            pinName = label;
+            pinMode = direction;
+            pinType = type;
+        } else {
+            // Old format: just a string (backward compatibility)
+            pinName = pinData;
+            pinMode = 'input'; // default
+            pinType = 'other'; // default
+        }
+
         let activeLow = false;
-
         if (pinName.startsWith('/')) {
             activeLow = true;
             pinName = pinName.substring(1);
@@ -287,18 +303,14 @@
         const yOffset = side === 'bottom' ? 0.5 : 0.6;
         const yPos = Math.min(x + yOffset, Math.max(0, chipWidth - edgeMargin));
 
-        // Randomly pick a pin type (temporary) and derive its color
-        const pinTypeDef = PIN_TYPE_COLOR_PALETTE[Math.floor(Math.random() * PIN_TYPE_COLOR_PALETTE.length)];
-        const pinColor = pinTypeDef.color;
+        // Look up pin color from type
+        const pinTypeDef = PIN_TYPE_COLOR_PALETTE.find(p => p.type === pinType) || PIN_TYPE_COLOR_PALETTE.find(p => p.type === 'other');
+        const pinColor = pinTypeDef ? pinTypeDef.color : '#000000';
 
         // Draw pin-direction indicator on chip edge
         const squareWidth = 0.8; // mm - width of indicator
         const squareHeight = 0.4; // mm - half-height for subtlety
         const squareMargin = 0.3; // mm - gap between square and text
-        // Randomly determine pin mode for now: input (unfilled), output (filled), bidirectional (half-filled)
-        const rand = Math.random();
-        /** @type {'input'|'output'|'bidirectional'} */
-        const pinMode = rand < 0.33 ? 'input' : (rand < 0.66 ? 'output' : 'bidirectional');
 
         // Position rectangle at the edge, centered on the pin position
         // The pin is at position x, so center the rectangle on that position
@@ -477,14 +489,14 @@
         const leftPad = Math.max(0, (chipWidth - trackLen) / 2);
         let pinX = leftPad;
         // @ts-ignore - jQuery
-        $.each(chip.pins, function (/** @type {string} */ pinNum, /** @type {string} */ pinName) {
+        $.each(chip.pins, function (/** @type {string} */ pinNum, /** @type {string | PinSpec} */ pinData) {
             const pinNumber = parseInt(String(pinNum), 10);
 
             if (pinNumber <= numPins / 2) {
                 // Bottom side pins
                 renderPin({
                     svgChip,
-                    pinName,
+                    pinData,
                     side: 'bottom',
                     x: pinX,
                     chipHeight,
@@ -497,7 +509,7 @@
                 pinX -= pitch;
                 renderPin({
                     svgChip,
-                    pinName,
+                    pinData,
                     side: 'top',
                     x: pinX,
                     chipHeight,
