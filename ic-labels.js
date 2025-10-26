@@ -446,21 +446,27 @@
             defaultChipLogicFamily: config.defaultChipLogicFamily,
             defaultChipSeries: config.defaultChipSeries,
         });
-        const labelFontSize = chipHeight * 0.5;
+        // Compute chip-face label styling so it fits inside the body and between pin labels
+        const labelHMargin = 1.5; // mm horizontal margin inside chip body
+        const labelTargetWidth = Math.max(0, chipWidth - 2 * labelHMargin);
+        const labelFontSize = Math.max(1.0, chipHeight * 0.32); // balanced size to avoid crowding pin labels
 
         // @ts-ignore - jQuery
         svgChip.append($(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
-            .html(`&nbsp;&nbsp;${displayName} ${chip.description}`)
+            .html(`${displayName} ${chip.description}`)
             .attr({
                 x: '50%',
-                y: chipHeight / 2 + 0.2 + 'mm',
+                y: chipHeight / 2 + 'mm',
                 'dominant-baseline': 'middle',
                 'text-anchor': 'middle',
-                'font-family': 'Times New Roman, serif',
+                'font-family': "'Roboto Condensed', 'Arial Narrow', 'Nimbus Sans Narrow', Arial, Helvetica, sans-serif",
                 'font-size': labelFontSize + 'mm',
-                'font-weight': 'bold',
+                'font-weight': 600,
+                'letter-spacing': '0.05mm',
+                lengthAdjust: 'spacingAndGlyphs',
+                textLength: labelTargetWidth + 'mm',
                 fill: getChipColor(chip.type, config.gimmeColor),
-                'fill-opacity': 0.3
+                'fill-opacity': 0.35
             })
         );
 
