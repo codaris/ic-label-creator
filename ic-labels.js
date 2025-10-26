@@ -277,12 +277,12 @@
         const squareMargin = 0.3; // mm - gap between square and text
         // Randomly determine if pin is output (filled) or input (unfilled)
         const isOutput = Math.random() > 0.5;
-        
+
         // Position rectangle at the edge, centered on the pin position
         // The pin is at position x, so center the rectangle on that position
         const squareX = x - (squareWidth / 2);
         const squareY = side === 'bottom' ? chipHeight - squareHeight : 0;
-        
+
         // @ts-ignore - jQuery
         const pinSquare = $(document.createElementNS("http://www.w3.org/2000/svg", 'rect'))
             .attr({
@@ -303,6 +303,15 @@
         const textOffsetBottom = chipHeight - squareHeight - squareMargin;
         const textOffsetTop = squareHeight + squareMargin;
 
+        // Calculate font size and adjust horizontal position for smaller fonts
+        const fontSize = calculatePinFontSize(pinName, chipHeight);
+        const fontSizeNum = parseFloat(fontSize);
+        // Adjust horizontal position to keep smaller text centered over the pin
+        // Base font is 1.6mm, smaller fonts need to shift left slightly
+        // Tweak factor empirically for best visual alignment
+        const fontAdjustment = (1.6 - fontSizeNum) * 0.3;
+        const yPosAdjusted = yPos - fontAdjustment;
+
         // @ts-ignore - jQuery
         const pinText = $(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
             .html(pinName)
@@ -313,10 +322,10 @@
                 'dominant-baseline': 'baseline',
                 'text-anchor': side === 'bottom' ? 'start' : 'end',
                 'font-family': getPinFontFamily(config.pinFontFamily),
-                'font-size': calculatePinFontSize(pinName, chipHeight),
+                'font-size': fontSize,
                 style: side === 'bottom'
-                    ? `transform: rotate(270deg) translate(-${textOffsetBottom}mm, ${yPos}mm);`
-                    : `transform: rotate(270deg) translate(-${textOffsetTop}mm, ${yPos}mm);`,
+                    ? `transform: rotate(270deg) translate(-${textOffsetBottom}mm, ${yPosAdjusted}mm);`
+                    : `transform: rotate(270deg) translate(-${textOffsetTop}mm, ${yPosAdjusted}mm);`,
             });
 
         svgChip.append(pinText);
