@@ -65,9 +65,11 @@ function drawChip(chipName, series, type) {
   }));
   
   // DRAW CHIP MODEL + DESCRIPTION
-
   tweakedChipName = tweakChipName(chipName, series, type);
-  
+
+  // Compute a larger "watermark" size based on chip height (min 3mm)
+  var labelFontSizeMM = chipHeight * 0.5;
+
   svgChip.append($(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
     .html('&nbsp;&nbsp;' + tweakedChipName + ' ' + chip.description)
     .attr({
@@ -75,13 +77,14 @@ function drawChip(chipName, series, type) {
       y : chipHeight / 2 + .2  + 'mm',
       'dominant-baseline': 'middle',
       'text-anchor': 'middle',
-      'font-family' : 'sans-serif',
-      'font-size' : '1.6mm',
+      'font-family' : 'Times New Roman, serif',  // changed: more elegant font
+      'font-size' : labelFontSizeMM + 'mm',   // changed: larger watermark size
       'font-weight' : 'bold',
       fill: chipColor(chip.type),
+      'fill-opacity': 0.3                   // changed: faded look
     })
   );
-  
+
   // DRAW PINS
   var x = globals.pinDistance / 2 + .5;
   jQuery.each(chip.pins, function (pinNum, pinName) {
