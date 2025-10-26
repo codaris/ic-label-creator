@@ -18,6 +18,23 @@
   /** @typedef {{w:number, h:number, css:string}} PagePreset */
   /** @typedef {{top:number, right:number, bottom:number, left:number}} Margins */
   /** @typedef {{paper:'A4'|'Letter', margins:Margins, zoom:number}} UIState */
+  /** @typedef {{
+   *  pageWidth:number,
+   *  pageHeight:number,
+   *  pinDistance:number,
+   *  chipHeightBase:number,
+   *  chipPositionX:number,
+   *  chipPositionY:number,
+   *  svgStrokeWidth:number,
+   *  svgStrokeOffset:number,
+   *  defaultChipLogicFamily:string,
+   *  defaultChipSeries:string,
+   *  gimmeColor:boolean,
+   *  pinFontFamily?:string
+   * }} RenderConfig */
+  /** @typedef {{defaultChipLogicFamily:string, defaultChipSeries:string}} ChipNameDefaults */
+
+  
 
   // ============================================================================
   // CONSTANTS & CONFIGURATION
@@ -209,7 +226,7 @@
     /** @type {string} */ chipName,
     /** @type {string|undefined} */ family,
     /** @type {string|undefined} */ series,
-    /** @type {{defaultChipLogicFamily:string, defaultChipSeries:string}} */ defaults
+    /** @type {ChipNameDefaults} */ defaults
   ) {
     if (family === undefined) {
       family = defaults.defaultChipLogicFamily || 'LS';
@@ -255,15 +272,18 @@
   /**
    * Draw a complete IC chip with pinouts
    * @param {string} chipName - Name of the chip (must exist in chips.js)
-   * @param {string} [series] - Series (e.g., '74', '54')
-   * @param {string} [type] - Logic family (e.g., 'LS', 'HC')
-  * @param {any} [g] - Rendering configuration (dimensions, spacing, fonts)
+   * @param {(string|undefined)} family - Logic family (e.g., 'LS', 'HC')
+   * @param {(string|undefined)} series - Series (e.g., '74', '54')
+  * @param {RenderConfig} config - Rendering configuration (dimensions, spacing, fonts)
    */
-  function drawChip(chipName, series, type, /** @type {any} */ g = {}) {
+  function drawChip(chipName, family, series, /** @type {RenderConfig} */ config) {
+    // Show effective family/series (defaults applied) in the console
+    const effFamily = family ?? config.defaultChipLogicFamily;
+    const effSeries = series ?? config.defaultChipSeries;
     // @ts-ignore - jQuery and chips are loaded globally
-    console.log('Drawing chip:', chipName, type, series);
+    console.log('Drawing chip:', chipName, effFamily, effSeries);
     
-  // @ts-ignore - chips defined in chips.js
+    // @ts-ignore - chips defined in chips.js
     const chip = window.chips && window.chips[chipName];
     
     if (!chip) {
@@ -273,27 +293,27 @@
     
     // Calculate chip dimensions
     const numPins = Object.keys(chip.pins).length;
-    const chipWidth = numPins / 2 * g.pinDistance + 1;
+  const chipWidth = numPins / 2 * config.pinDistance + 1;
     const chipHeightPins = chip.heightPins || 3;
-    const chipHeight = chipHeightPins * g.chipHeightBase;
+  const chipHeight = chipHeightPins * config.chipHeightBase;
     
     // @ts-ignore - jQuery
     const svgChip = $(document.createElementNS("http://www.w3.org/2000/svg", 'svg')).attr({
       width: chipWidth + 'mm',
       height: chipHeight + 'mm',
-      x: g.chipPositionX + 'mm',
-      y: g.chipPositionY + 'mm',
+  x: config.chipPositionX + 'mm',
+  y: config.chipPositionY + 'mm',
     });
     
     // Draw chip body outline
     // @ts-ignore - jQuery
     svgChip.append($(document.createElementNS("http://www.w3.org/2000/svg", 'rect')).attr({
-      x: g.svgStrokeOffset + 'mm',
-      y: g.svgStrokeOffset + 'mm',
-      width: chipWidth - g.svgStrokeOffset + 'mm',
-      height: chipHeight - g.svgStrokeOffset + 'mm',
+  x: config.svgStrokeOffset + 'mm',
+  y: config.svgStrokeOffset + 'mm',
+  width: chipWidth - config.svgStrokeOffset + 'mm',
+  height: chipHeight - config.svgStrokeOffset + 'mm',
       stroke: 'silver',
-      'stroke-width': g.svgStrokeWidth + 'mm',
+  'stroke-width': config.svgStrokeWidth + 'mm',
       fill: 'white'
     }));
     
@@ -307,9 +327,9 @@
     }));
     
     // Draw chip label (model + description)
-    const displayName = adjustChipName(chipName, series, type, {
-      defaultChipLogicFamily: g.defaultChipLogicFamily,
-      defaultChipSeries: g.defaultChipSeries,
+    const displayName = adjustChipName(chipName, family, series, {
+  defaultChipLogicFamily: config.defaultChipLogicFamily,
+  defaultChipSeries: config.defaultChipSeries,
     });
     const labelFontSize = chipHeight * 0.5;
     
@@ -324,13 +344,13 @@
         'font-family': 'Times New Roman, serif',
         'font-size': labelFontSize + 'mm',
         'font-weight': 'bold',
-        fill: getChipColor(chip.type, g.gimmeColor),
+  fill: getChipColor(chip.type, config.gimmeColor),
         'fill-opacity': 0.3
       })
     );
     
     // Draw all pins
-    let pinX = g.pinDistance / 2 + 0.5;
+  let pinX = config.pinDistance / 2 + 0.5;
     // @ts-ignore - jQuery
     $.each(chip.pins, function(/** @type {any} */ pinNum, /** @type {any} */ pinName) {
       const pinNumber = parseInt(String(pinNum), 10);
@@ -344,12 +364,12 @@
           x: pinX,
           chipHeight,
           chipHeightPins,
-          pinFontFamily: g.pinFontFamily,
+          pinFontFamily: config.pinFontFamily,
         });
-        pinX += g.pinDistance;
+        pinX += config.pinDistance;
       } else {
         // Top side pins
-        pinX -= g.pinDistance;
+  pinX -= config.pinDistance;
         renderPin({
           svgChip,
           pinName,
@@ -357,7 +377,7 @@
           x: pinX,
           chipHeight,
           chipHeightPins,
-          pinFontFamily: g.pinFontFamily,
+          pinFontFamily: config.pinFontFamily,
         });
       }
     });
@@ -367,11 +387,11 @@
     $('#page').append(svgChip);
     
     // Update position for next chip (auto-flow into columns)
-    g.chipPositionY += chipHeight + 4;
+  config.chipPositionY += chipHeight + 4;
     
-    if (g.chipPositionY + 10 > g.pageHeight) {
-      g.chipPositionY = 0;
-      g.chipPositionX += 50;
+    if (config.chipPositionY + 10 > config.pageHeight) {
+      config.chipPositionY = 0;
+      config.chipPositionX += 50;
     }
   }
 
@@ -565,8 +585,9 @@
       this._svg.style.left = mm(this._margins.left);
       this._svg.style.top = mm(this._margins.top);
 
-      // Build rendering configuration (replaces window.globals)
-      const g = {
+  // Build rendering configuration (replaces window.globals)
+  /** @type {RenderConfig} */
+  const config = {
         pageWidth: contentW,
         pageHeight: contentH,
         pinDistance: this._pinDistance,
@@ -585,14 +606,15 @@
 
       // Render chips
       clearPage();
-      const chipElements = this.querySelectorAll('ic-chip');
-      chipElements.forEach(chip => {
+  const chipElements = this.querySelectorAll('ic-chip');
+  chipElements.forEach(chip => {
         const chipName = (chip.textContent || '').trim();
         if (!chipName) return;
-        
+        const family = chip.getAttribute('family') || chip.getAttribute('type') || undefined;
+        const series = chip.getAttribute('series') || undefined;
         const count = Math.max(1, Math.floor(Number(chip.getAttribute('count')) || 1));
         for (let i = 0; i < count; i++) {
-          drawChip(chipName, undefined, undefined, g);
+          drawChip(chipName, family || undefined, series || undefined, config);
         }
       });
     }
