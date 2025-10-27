@@ -150,6 +150,52 @@
         { type: 'other', color: '#000000' },      // fallback/other
     ];
 
+    // Chip type color palette (easy to modify). Each entry maps a chip type to a label color.
+    const CHIP_TYPE_COLOR_PALETTE = [
+        { type: 'ram', color: 'red' },
+        { type: 'sram', color: 'red' },
+        { type: 'eeprom', color: 'red' },
+        { type: 'register', color: 'red' },
+        { type: 'flipflop', color: 'red' },
+        { type: 'gate', color: 'blue' },
+        { type: 'mux', color: 'green' },
+        { type: 'demux', color: 'green' },
+        { type: 'via', color: 'green' },
+        { type: 'counter', color: 'magenta' },
+        { type: 'cpu', color: 'darkorange' },
+        { type: 'other', color: 'black' },        // fallback
+    ];
+
+    // Derived helpers to avoid duplication and speed up lookups
+    const PIN_TYPE_COLOR_MAP = Object.fromEntries(PIN_TYPE_COLOR_PALETTE.map(({ type, color }) => [type, color]));
+    const PIN_TYPES = new Set(Object.keys(PIN_TYPE_COLOR_MAP));
+    const CHIP_TYPE_COLOR_MAP = Object.fromEntries(CHIP_TYPE_COLOR_PALETTE.map(({ type, color }) => [type, color]));
+
+    /** Get color for a pin type with safe fallback */
+    function getPinColorByType(/** @type {PinType|string} */ type) {
+        return PIN_TYPE_COLOR_MAP[type] ?? PIN_TYPE_COLOR_MAP.other ?? '#000000';
+    }
+
+    /** Get color for a chip type with safe fallback */
+    function getChipColorByType(/** @type {ChipType|string} */ chipType, /** @type {boolean} */ gimmeColor) {
+        if (!gimmeColor) return 'black';
+        return CHIP_TYPE_COLOR_MAP[chipType] ?? CHIP_TYPE_COLOR_MAP.other ?? 'black';
+    }
+
+    /** Normalize pin type to a known type from palette */
+    function normalizePinType(/** @type {string|null} */ t) /** @returns {PinType} */ {
+        const type = (t ?? 'other').toLowerCase();
+        return /** @type {PinType} */ (PIN_TYPES.has(type) ? type : 'other');
+    }
+
+    /** Normalize direction aliases to canonical values */
+    function normalizePinDirection(/** @type {string|null} */ d) /** @returns {PinDirection} */ {
+        const dir = (d ?? '').toLowerCase();
+        /** @type {Record<string, PinDirection>} */
+        const map = { in: 'input', input: 'input', out: 'output', output: 'output', io: 'bidirectional', inout: 'bidirectional', bidirectional: 'bidirectional' };
+        return map[dir] ?? 'input';
+    }
+
     // ============================================================================
     // UTILITY FUNCTIONS
     // ============================================================================
@@ -215,14 +261,13 @@
     /** Reset the SVG page and chip positioning */
     function clearPage() {
         const svg = document.getElementById('page');
-        if (svg) {
-            while (svg.firstChild) svg.removeChild(svg.firstChild);
-        }
+        // Modern and concise: remove all children at once
+        svg?.replaceChildren();
     }
 
     /** Get pin font family (allows override) */
     function getPinFontFamily(/** @type {string|undefined|null} */ override) {
-        if (override && String(override).trim().length > 0) return String(override);
+        if (override?.trim()) return String(override);
         return '"Arial Narrow", "Helvetica Neue Condensed", "Roboto Condensed", Arial, "Liberation Sans Narrow", sans-serif';
     }
 
@@ -240,22 +285,6 @@
         return '1.1mm';
     }
 
-    /** Determine chip label color based on type */
-    function getChipColor(/** @type {ChipType} */ chipType, /** @type {boolean} */ gimmeColor) {
-        if (gimmeColor === false) return 'black';
-
-        /** @type {Record<string, string>} */
-        const colorMap = {
-            ram: 'red', sram: 'red', eeprom: 'red', register: 'red', flipflop: 'red',
-            gate: 'blue',
-            mux: 'green', demux: 'green', via: 'green',
-            counter: 'magenta',
-            cpu: 'darkorange',
-        };
-
-        return colorMap[chipType] || 'black';
-    }
-
     /** Adjust chip name with series and logic family */
     function adjustChipName(
         /** @type {string} */ chipName,
@@ -263,12 +292,8 @@
         /** @type {string|undefined} */ series,
         /** @type {ChipNameDefaults} */ defaults
     ) {
-        if (family === undefined) {
-            family = defaults.defaultChipLogicFamily || 'LS';
-        }
-        if (series === undefined) {
-            series = defaults.defaultChipSeries || '74';
-        }
+        family ??= (defaults.defaultChipLogicFamily || 'LS');
+        series ??= (defaults.defaultChipSeries || '74');
         return chipName.replace(/^74LS/, series + family);
     }
 
@@ -303,9 +328,8 @@
         const yOffset = side === 'bottom' ? 0.5 : 0.6;
         const yPos = Math.min(x + yOffset, Math.max(0, chipWidth - edgeMargin));
 
-        // Look up pin color from type
-        const pinTypeDef = PIN_TYPE_COLOR_PALETTE.find(p => p.type === pinType) || PIN_TYPE_COLOR_PALETTE.find(p => p.type === 'other');
-        const pinColor = pinTypeDef ? pinTypeDef.color : '#000000';
+    // Look up pin color from type
+    const pinColor = getPinColorByType(pinType);
 
         // Draw pin-direction indicator on chip edge
         const squareWidth = 0.8; // mm - width of indicator
@@ -352,7 +376,7 @@
         const textOffsetBottom = chipHeight - squareHeight - squareMargin;
         const textOffsetTop = squareHeight + squareMargin;
 
-        // Calculate font size and adjust horizontal position for smaller fonts
+    // Calculate font size and adjust horizontal position for smaller fonts
         const fontSize = calculatePinFontSize(pinName, chipHeight);
         const fontSizeNum = parseFloat(fontSize);
         // Adjust horizontal position to keep smaller text centered over the pin
@@ -396,8 +420,7 @@
 
         /** @type {ICWindow} */
         const W = /** @type {ICWindow} */ (window);
-        const chipRegistry = W.chips;
-        const chip = chipRegistry ? chipRegistry[chipName] : undefined;
+        const chip = W.chips?.[chipName];
 
         if (!chip) {
             alert(`Error: unknown chip "${chipName}". Please check spelling or add pinout to chips.js.`);
@@ -405,24 +428,20 @@
         }
 
         // Resolve package information (from chips.js)
-        const pkgName = chip.package;
-        const pkgRegistry = W.packages;
-        const pkg = (pkgRegistry && pkgName) ? pkgRegistry[pkgName] : undefined;
+    const pkgName = chip.package;
+    const pkg = W.packages?.[pkgName ?? ''];
 
         // Calculate chip dimensions using package dimensions when available
-        const numPins = (pkg && pkg.pins) ? pkg.pins : Object.keys(chip.pins).length;
-        const pitch = (pkg && pkg.pinPitch) ? pkg.pinPitch : config.pinDistance;
-        const chipWidth = (pkg && pkg.bodyLength)
-            ? pkg.bodyLength
-            : Math.max(pitch, ((numPins / 2 - 1) * pitch));
+        const numPins = pkg?.pins ?? Object.keys(chip.pins).length;
+        const pitch = pkg?.pinPitch ?? config.pinDistance;
+        const chipWidth = pkg?.bodyLength ?? Math.max(pitch, ((numPins / 2 - 1) * pitch));
+
         // Determine base body width from package (prefer bodyWidth, fall back to rowSpacing), else default 7.62mm
-        let baseBodyWidth = 7.62;
-        if (pkg) {
-            if (typeof pkg.bodyWidth === 'number') baseBodyWidth = pkg.bodyWidth;
-            else if (typeof pkg.rowSpacing === 'number') baseBodyWidth = pkg.rowSpacing;
-        }
+        const baseBodyWidth = (typeof pkg?.bodyWidth === 'number') ? pkg.bodyWidth
+            : (typeof pkg?.rowSpacing === 'number') ? pkg.rowSpacing
+            : 7.62;
         const chipHeightRaw = baseBodyWidth;
-        const chipHeight = Math.max(1, chipHeightRaw - (config.heightSizeAdjust || 0));
+        const chipHeight = Math.max(1, chipHeightRaw - (config.heightSizeAdjust ?? 0));
 
         // @ts-ignore - jQuery
         const svgChip = $(document.createElementNS("http://www.w3.org/2000/svg", 'svg')).attr({
@@ -478,7 +497,7 @@
                 'font-size': labelFontSize + 'mm',
                 'font-weight': 600,
                 'letter-spacing': '0.05mm',
-                fill: getChipColor(chip.type, config.gimmeColor),
+                fill: getChipColorByType(chip.type, config.gimmeColor),
                 'fill-opacity': 0.35
             });
 
@@ -819,14 +838,16 @@
      */
     function parsePinElement(pinEl, pinNum) {
         // Get pin direction - support both 'direction' and 'dir' attributes
-        let direction = pinEl.getAttribute('direction') || pinEl.getAttribute('dir') || '';
-        
-        // Get pin type
-        let type = pinEl.getAttribute('type') || 'other';
-        
+        const directionRaw = pinEl.getAttribute('direction') ?? pinEl.getAttribute('dir');
+        const direction = normalizePinDirection(directionRaw);
+
+        // Get pin type and normalize to palette
+        const typeRaw = pinEl.getAttribute('type');
+        const type = normalizePinType(typeRaw ?? 'other');
+
         // Get pin label - use textContent if provided, otherwise empty
-        let label = (pinEl.textContent || '').trim();
-        
+        const label = (pinEl.textContent ?? '').trim();
+
         // Handle special type cases using global helper functions if available
         if (type === 'power') {
             // @ts-ignore - global function from chips.js
@@ -844,23 +865,8 @@
             }
             return [label || '⏚', 'input', 'ground'];
         }
-              
-        // Normalize direction
-        direction = direction.toLowerCase();
-        if (direction === 'in') direction = 'input';
-        if (direction === 'out') direction = 'output';
-        if (direction === 'io' || direction === 'inout') direction = 'bidirectional';
-        
-        // Validate direction
-        if (direction !== 'input' && direction !== 'output' && direction !== 'bidirectional') {
-            direction = 'input'; // default
-        }
-        
-        // Normalize type
-        type = type.toLowerCase();
-        const validTypes = ['power', 'ground', 'address', 'data', 'clock', 'chip-select', 'reset', 'enable', 'interrupt', 'nc', 'other'];
-        if (!validTypes.includes(type)) type = 'other';      
-        return [label, /** @type {PinDirection} */ (direction), /** @type {PinType} */ (type)];
+
+        return [label, direction, type];
     }
     
     /**
