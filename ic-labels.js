@@ -258,6 +258,12 @@
     // CHIP RENDERING ENGINE (Legacy compatible)
     // ============================================================================
 
+    /** Create SVG element with attributes (jQuery wrapper) */
+    function createSVGElement(/** @type {string} */ tag, /** @type {Record<string, any>} */ attrs = {}) {
+        // @ts-ignore - jQuery
+        return $(document.createElementNS("http://www.w3.org/2000/svg", tag)).attr(attrs);
+    }
+
     /** Reset the SVG page and chip positioning */
     function clearPage() {
         const svg = document.getElementById('page');
@@ -328,8 +334,8 @@
         const yOffset = side === 'bottom' ? 0.5 : 0.6;
         const yPos = Math.min(x + yOffset, Math.max(0, chipWidth - edgeMargin));
 
-    // Look up pin color from type
-    const pinColor = getPinColorByType(pinType);
+        // Look up pin color from type
+        const pinColor = getPinColorByType(pinType);
 
         // Draw pin-direction indicator on chip edge
         const squareWidth = 0.8; // mm - width of indicator
@@ -337,37 +343,29 @@
         const squareMargin = 0.3; // mm - gap between square and text
 
         // Position rectangle at the edge, centered on the pin position
-        // The pin is at position x, so center the rectangle on that position
         const squareX = x - (squareWidth / 2);
         const squareY = side === 'bottom' ? chipHeight - squareHeight : 0;
 
-        // @ts-ignore - jQuery
-        const baseRect = $(document.createElementNS("http://www.w3.org/2000/svg", 'rect'))
-            .attr({
-                x: squareX + 'mm',
-                y: squareY + 'mm',
-                width: squareWidth + 'mm',
-                height: squareHeight + 'mm',
-                fill: pinMode === 'output' ? pinColor : 'white',
-                stroke: pinColor,
-                'stroke-width': '0.1mm'
-            });
-
-        svgChip.append(baseRect);
+        svgChip.append(createSVGElement('rect', {
+            x: squareX + 'mm',
+            y: squareY + 'mm',
+            width: squareWidth + 'mm',
+            height: squareHeight + 'mm',
+            fill: pinMode === 'output' ? pinColor : 'white',
+            stroke: pinColor,
+            'stroke-width': '0.1mm'
+        }));
 
         // For bidirectional pins, overlay half the rectangle as filled
         if (pinMode === 'bidirectional') {
-            // @ts-ignore - jQuery
-            const halfFill = $(document.createElementNS("http://www.w3.org/2000/svg", 'rect'))
-                .attr({
-                    x: squareX + 'mm',
-                    y: squareY + 'mm',
-                    width: (squareWidth / 2) + 'mm',
-                    height: squareHeight + 'mm',
-                    fill: pinColor,
-                    stroke: 'none'
-                });
-            svgChip.append(halfFill);
+            svgChip.append(createSVGElement('rect', {
+                x: squareX + 'mm',
+                y: squareY + 'mm',
+                width: (squareWidth / 2) + 'mm',
+                height: squareHeight + 'mm',
+                fill: pinColor,
+                stroke: 'none'
+            }));
         }
 
         // Calculate text position with margin from rectangle
@@ -376,7 +374,7 @@
         const textOffsetBottom = chipHeight - squareHeight - squareMargin;
         const textOffsetTop = squareHeight + squareMargin;
 
-    // Calculate font size and adjust horizontal position for smaller fonts
+        // Calculate font size and adjust horizontal position for smaller fonts
         const fontSize = calculatePinFontSize(pinName, chipHeight);
         const fontSizeNum = parseFloat(fontSize);
         // Adjust horizontal position to keep smaller text centered over the pin
@@ -385,10 +383,8 @@
         const fontAdjustment = (1.6 - fontSizeNum) * 0.3;
         const yPosAdjusted = yPos - fontAdjustment;
 
-        // @ts-ignore - jQuery
-        const pinText = $(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
-            .html(pinName)
-            .attr({
+        svgChip.append(
+            createSVGElement('text', {
                 x: 0,
                 y: 0,
                 'text-decoration': activeLow ? 'overline' : '',
@@ -400,9 +396,8 @@
                 style: side === 'bottom'
                     ? `transform: rotate(270deg) translate(-${textOffsetBottom}mm, ${yPosAdjusted}mm);`
                     : `transform: rotate(270deg) translate(-${textOffsetTop}mm, ${yPosAdjusted}mm);`,
-            });
-
-        svgChip.append(pinText);
+            }).html(pinName)
+        );
     }
 
     /**
@@ -428,8 +423,8 @@
         }
 
         // Resolve package information (from chips.js)
-    const pkgName = chip.package;
-    const pkg = W.packages?.[pkgName ?? ''];
+        const pkgName = chip.package;
+        const pkg = W.packages?.[pkgName ?? ''];
 
         // Calculate chip dimensions using package dimensions when available
         const numPins = pkg?.pins ?? Object.keys(chip.pins).length;
@@ -439,12 +434,11 @@
         // Determine base body width from package (prefer bodyWidth, fall back to rowSpacing), else default 7.62mm
         const baseBodyWidth = (typeof pkg?.bodyWidth === 'number') ? pkg.bodyWidth
             : (typeof pkg?.rowSpacing === 'number') ? pkg.rowSpacing
-            : 7.62;
+                : 7.62;
         const chipHeightRaw = baseBodyWidth;
         const chipHeight = Math.max(1, chipHeightRaw - (config.heightSizeAdjust ?? 0));
 
-        // @ts-ignore - jQuery
-        const svgChip = $(document.createElementNS("http://www.w3.org/2000/svg", 'svg')).attr({
+        const svgChip = createSVGElement('svg', {
             width: chipWidth + 'mm',
             height: chipHeight + 'mm',
             x: config.chipPositionX + 'mm',
@@ -452,8 +446,7 @@
         });
 
         // Draw chip body outline
-        // @ts-ignore - jQuery
-        svgChip.append($(document.createElementNS("http://www.w3.org/2000/svg", 'rect')).attr({
+        svgChip.append(createSVGElement('rect', {
             x: config.svgStrokeOffset + 'mm',
             y: config.svgStrokeOffset + 'mm',
             width: chipWidth - config.svgStrokeOffset + 'mm',
@@ -464,8 +457,7 @@
         }));
 
         // Draw pin 1 indicator (half-circle)
-        // @ts-ignore - jQuery
-        svgChip.append($(document.createElementNS("http://www.w3.org/2000/svg", 'circle')).attr({
+        svgChip.append(createSVGElement('circle', {
             cx: 0,
             cy: '50%',
             r: '1.2mm',
@@ -485,21 +477,18 @@
         // Create the chip label text element
         // We only compress long labels to fit; we do NOT expand short labels to fill the width
         // This keeps small chips looking the same and avoids overly wide text on large chips
-        // @ts-ignore - jQuery
-        const labelTextEl = $(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
-            .html(`${displayName} ${chip.description}`)
-            .attr({
-                x: '50%',
-                y: chipHeight / 2 + 'mm',
-                'dominant-baseline': 'middle',
-                'text-anchor': 'middle',
-                'font-family': "'Roboto Condensed', 'Arial Narrow', 'Nimbus Sans Narrow', Arial, Helvetica, sans-serif",
-                'font-size': labelFontSize + 'mm',
-                'font-weight': 600,
-                'letter-spacing': '0.05mm',
-                fill: getChipColorByType(chip.type, config.gimmeColor),
-                'fill-opacity': 0.35
-            });
+        const labelTextEl = createSVGElement('text', {
+            x: '50%',
+            y: chipHeight / 2 + 'mm',
+            'dominant-baseline': 'middle',
+            'text-anchor': 'middle',
+            'font-family': "'Roboto Condensed', 'Arial Narrow', 'Nimbus Sans Narrow', Arial, Helvetica, sans-serif",
+            'font-size': labelFontSize + 'mm',
+            'font-weight': 600,
+            'letter-spacing': '0.05mm',
+            fill: getChipColorByType(chip.type, config.gimmeColor),
+            'fill-opacity': 0.35
+        }).html(`${displayName} ${chip.description}`);
 
         // Append first so we can measure the natural width
         // @ts-ignore - jQuery
@@ -531,32 +520,21 @@
         // @ts-ignore - jQuery
         $.each(chip.pins, function (/** @type {string} */ pinNum, /** @type {string | PinSpec} */ pinData) {
             const pinNumber = parseInt(String(pinNum), 10);
+            const isBottom = pinNumber <= pinsPerSide;
 
-            if (pinNumber <= numPins / 2) {
-                // Bottom side pins
-                renderPin({
-                    svgChip,
-                    pinData,
-                    side: 'bottom',
-                    x: pinX,
-                    chipHeight,
-                    chipWidth,
-                    pinFontFamily: config.pinFontFamily,
-                });
-                pinX += pitch;
-            } else {
-                // Top side pins
-                pinX -= pitch;
-                renderPin({
-                    svgChip,
-                    pinData,
-                    side: 'top',
-                    x: pinX,
-                    chipHeight,
-                    chipWidth,
-                    pinFontFamily: config.pinFontFamily,
-                });
-            }
+            if (!isBottom) pinX -= pitch;
+
+            renderPin({
+                svgChip,
+                pinData,
+                side: isBottom ? 'bottom' : 'top',
+                x: pinX,
+                chipHeight,
+                chipWidth,
+                pinFontFamily: config.pinFontFamily,
+            });
+
+            if (isBottom) pinX += pitch;
         });
 
         // Add chip to page
@@ -621,44 +599,33 @@
         }
 
         attributeChangedCallback(/** @type {string} */ name, /** @type {string|null} */ _oldVal, /** @type {string|null} */ newVal) {
-            if (name === 'paper') {
-                this._paper = (newVal === 'A4' ? 'A4' : 'Letter');
-                this._scheduleRender();
-            } else if (name === 'margins') {
-                this._margins = parseMargins(newVal, this._margins);
-                this._scheduleRender();
-            } else if (name === 'pindistance') {
-                const v = parseFloat(String(newVal || ''));
-                if (!Number.isNaN(v)) this._pinDistance = v;
-                this._scheduleRender();
-            } else if (name === 'heightsizeadjust') {
-                const v = parseFloat(String(newVal || ''));
-                if (!Number.isNaN(v)) this._heightSizeAdjust = v;
-                this._scheduleRender();
-            } else if (name === 'svgstrokewidth') {
-                const v = parseFloat(String(newVal || ''));
-                if (!Number.isNaN(v)) this._svgStrokeWidth = v;
-                this._scheduleRender();
-            } else if (name === 'svgstrokeoffset') {
-                const v = parseFloat(String(newVal || ''));
-                if (!Number.isNaN(v)) this._svgStrokeOffset = v;
-                this._scheduleRender();
-            } else if (name === 'defaultchiplogicfamily') {
-                this._defaultChipLogicFamily = String(newVal || 'LS');
-                this._scheduleRender();
-            } else if (name === 'defaultchipseries') {
-                this._defaultChipSeries = String(newVal || '74');
-                this._scheduleRender();
-            } else if (name === 'gimmecolor') {
-                const s = (newVal ?? '').toLowerCase();
-                // truthy unless explicitly false/0
-                this._gimmeColor = !(s === 'false' || s === '0' || s === 'no');
-                this._scheduleRender();
-            } else if (name === 'pinfontfamily') {
-                const v = newVal == null ? undefined : String(newVal);
-                this._pinFontFamily = v && v.trim().length ? v : undefined;
-                this._scheduleRender();
-            }
+            const parseNum = (/** @type {string|null} */ val) => {
+                const v = parseFloat(String(val ?? ''));
+                return Number.isNaN(v) ? null : v;
+            };
+
+            const handlers = {
+                paper: () => { this._paper = (newVal === 'A4' ? 'A4' : 'Letter'); },
+                margins: () => { this._margins = parseMargins(newVal, this._margins); },
+                pindistance: () => { const v = parseNum(newVal); if (v !== null) this._pinDistance = v; },
+                heightsizeadjust: () => { const v = parseNum(newVal); if (v !== null) this._heightSizeAdjust = v; },
+                svgstrokewidth: () => { const v = parseNum(newVal); if (v !== null) this._svgStrokeWidth = v; },
+                svgstrokeoffset: () => { const v = parseNum(newVal); if (v !== null) this._svgStrokeOffset = v; },
+                defaultchiplogicfamily: () => { this._defaultChipLogicFamily = String(newVal || 'LS'); },
+                defaultchipseries: () => { this._defaultChipSeries = String(newVal || '74'); },
+                gimmecolor: () => {
+                    const s = (newVal ?? '').toLowerCase();
+                    this._gimmeColor = !(s === 'false' || s === '0' || s === 'no');
+                },
+                pinfontfamily: () => {
+                    const v = newVal?.trim();
+                    this._pinFontFamily = v || undefined;
+                },
+            };
+
+            const handler = /** @type {(() => void) | undefined} */ (handlers[/** @type {keyof typeof handlers} */ (name)]);
+            handler?.();
+            this._scheduleRender();
         }
 
         connectedCallback() {
@@ -780,19 +747,19 @@
 
             updatePrintPageSize(this._paper);
             clearPage();
-            
+
             /** @type {ICWindow} */
             const W = /** @type {ICWindow} */ (window);
             if (!W.chips) W.chips = {};
             const chipRegistry = W.chips;
-            
+
             const chipElements = this.querySelectorAll('ic-chip');
-            
+
             // First pass: register any custom chips defined in markup
             chipElements.forEach(chip => {
                 const hasPackage = chip.hasAttribute('package');
                 const hasExtends = chip.hasAttribute('extends');
-                
+
                 if (hasPackage || hasExtends) {
                     const customChip = buildCustomChipFromMarkup(chip);
                     if (customChip) {
@@ -801,7 +768,7 @@
                     }
                 }
             });
-            
+
             // Second pass: render all chips
             chipElements.forEach(chip => {
                 // Determine chip name - use label for custom chips, or text content for standard chips
@@ -809,7 +776,7 @@
                 const labelAttr = chip.getAttribute('label');
                 const extendsAttr = chip.getAttribute('extends');
                 const hasPackage = chip.hasAttribute('package');
-                
+
                 if (labelAttr) {
                     chipName = labelAttr;
                 } else if (extendsAttr) {
@@ -817,9 +784,9 @@
                 } else {
                     chipName = (chip.textContent || '').trim();
                 }
-                
+
                 if (!chipName) return;
-                
+
                 const family = chip.getAttribute('family') || chip.getAttribute('type') || undefined;
                 const series = chip.getAttribute('series') || undefined;
                 const count = Math.max(1, Math.floor(Number(chip.getAttribute('count')) || 1));
@@ -849,26 +816,26 @@
         const label = (pinEl.textContent ?? '').trim();
 
         // Handle special type cases using global helper functions if available
-        if (type === 'power') {
+        /** @type {Record<string, {helper: string, fallback: string}>} */
+        const specialTypes = {
+            power: { helper: 'pwr', fallback: '⊕' },
+            ground: { helper: 'gnd', fallback: '⏚' },
+        };
+
+        const special = specialTypes[String(type)];
+        if (special) {
             // @ts-ignore - global function from chips.js
-            if (typeof window.pwr === 'function') {
+            const helperFn = window[special.helper];
+            if (typeof helperFn === 'function') {
                 // @ts-ignore - global function from chips.js
-                return window.pwr(label || undefined);
+                return helperFn(label || undefined);
             }
-            return [label || '⊕', 'input', 'power'];
-        }
-        if (type === 'ground') {
-            // @ts-ignore - global function from chips.js
-            if (typeof window.gnd === 'function') {
-                // @ts-ignore - global function from chips.js
-                return window.gnd(label || undefined);
-            }
-            return [label || '⏚', 'input', 'ground'];
+            return [label || special.fallback, 'input', type];
         }
 
         return [label, direction, type];
     }
-    
+
     /**
      * Build a custom chip definition from markup
      * @param {Element} chipEl - The <ic-chip> element
@@ -880,17 +847,17 @@
         const labelAttr = chipEl.getAttribute('label');
         const descriptionAttr = chipEl.getAttribute('description') || 'custom';
         const typeAttr = chipEl.getAttribute('type') || 'other';
-        
+
         /** @type {ICWindow} */
         const W = /** @type {ICWindow} */ (window);
         const chipRegistry = W.chips || {};
-        
+
         let chipDef = /** @type {Chip} */ ({
             description: descriptionAttr,
             type: /** @type {ChipType} */ (typeAttr),
             pins: {}
         });
-        
+
         // Handle "extends" scenario - copy from existing chip
         if (extendsAttr) {
             const baseChip = chipRegistry[extendsAttr];
@@ -898,7 +865,7 @@
                 console.error(`Cannot extend unknown chip: ${extendsAttr}`);
                 return null;
             }
-            
+
             // Clone base chip
             chipDef = {
                 description: descriptionAttr || baseChip.description,
@@ -906,10 +873,10 @@
                 package: baseChip.package,
                 pins: { ...baseChip.pins }
             };
-            
+
             // Use label or extends name as chip name
             const chipName = labelAttr || extendsAttr;
-            
+
             // Override specific pins from markup
             const pinElements = chipEl.querySelectorAll('pin');
             pinElements.forEach(pinEl => {
@@ -919,30 +886,30 @@
                     chipDef.pins[pinNum] = parsePinElement(pinEl, pinNum);
                 }
             });
-            
+
             return { chipName, chipDef };
         }
-        
+
         // Handle "package" scenario - build from scratch
         if (packageAttr && labelAttr) {
             chipDef.package = packageAttr;
-            
+
             const packageRegistry = W.packages || {};
             const pkg = packageRegistry[packageAttr];
             if (!pkg) {
                 console.error(`Unknown package: ${packageAttr}`);
                 return null;
             }
-            
+
             const totalPins = pkg.pins;
             const pinElements = Array.from(chipEl.querySelectorAll('pin'));
-            
+
             let currentPinNum = 1;
-            
+
             pinElements.forEach(pinEl => {
                 const numAttr = pinEl.getAttribute('num');
                 let pinNum;
-                
+
                 if (numAttr) {
                     pinNum = parseInt(numAttr, 10);
                     currentPinNum = pinNum + 1;
@@ -950,15 +917,15 @@
                     pinNum = currentPinNum;
                     currentPinNum++;
                 }
-                
+
                 if (pinNum >= 1 && pinNum <= totalPins) {
                     chipDef.pins[pinNum] = parsePinElement(pinEl, pinNum);
                 }
             });
-            
+
             return { chipName: labelAttr, chipDef };
         }
-        
+
         return null;
     }
 
