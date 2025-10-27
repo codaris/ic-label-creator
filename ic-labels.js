@@ -422,12 +422,35 @@
             return;
         }
 
+        // Validate chip has pins object
+        if (!chip.pins || typeof chip.pins !== 'object') {
+            alert(`Error: chip "${chipName}" is missing pins definition. Please check chips.js.`);
+            return;
+        }
+
         // Resolve package information (from chips.js)
         const pkgName = chip.package;
         const pkg = W.packages?.[pkgName ?? ''];
 
+        // Validate package exists if referenced
+        if (pkgName && !pkg) {
+            alert(`Error: chip "${chipName}" references unknown package "${pkgName}". Please check chips.js.`);
+            return;
+        }
+
         // Calculate chip dimensions using package dimensions when available
         const numPins = pkg?.pins ?? Object.keys(chip.pins).length;
+        
+        // Validate pin count
+        if (numPins <= 0) {
+            alert(`Error: chip "${chipName}" has no pins defined. Please check chips.js.`);
+            return;
+        }
+        if (numPins % 2 !== 0) {
+            alert(`Error: chip "${chipName}" has odd number of pins (${numPins}). DIP chips must have even pin count.`);
+            return;
+        }
+        
         const pitch = pkg?.pinPitch ?? config.pinDistance;
         const chipWidth = pkg?.bodyLength ?? Math.max(pitch, ((numPins / 2 - 1) * pitch));
 
@@ -862,8 +885,8 @@
         if (extendsAttr) {
             const baseChip = chipRegistry[extendsAttr];
             if (!baseChip) {
-                console.error(`Cannot extend unknown chip: ${extendsAttr}`);
-                return null;
+                 alert(`Error: cannot extend unknown chip: ${extendsAttr}`);
+                 return null;
             }
 
             // Clone base chip
@@ -897,8 +920,8 @@
             const packageRegistry = W.packages || {};
             const pkg = packageRegistry[packageAttr];
             if (!pkg) {
-                console.error(`Unknown package: ${packageAttr}`);
-                return null;
+                 alert(`Error: unknown package: ${packageAttr}`);
+                 return null;
             }
 
             const totalPins = pkg.pins;
