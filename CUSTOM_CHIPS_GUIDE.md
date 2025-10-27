@@ -1,17 +1,19 @@
+
 # Custom Chip Definitions Guide
 
 This guide explains how to define custom chips directly in your HTML markup without modifying `chips.js`.
 
+
 ## Quick Start
 
-There are two ways to define custom chips:
+You can define chips in two ways:
+1. **Create a new chip from scratch** — Define all pins for a custom chip
+2. **Extend an existing chip** — Override specific pins of an existing chip
 
-1. **Create a new chip from scratch** - Define all pins for a custom chip
-2. **Extend an existing chip** - Override specific pins of an existing chip
 
 ## Creating a New Custom Chip
 
-Define a completely new chip by specifying the package type and pin definitions:
+Define a completely new chip by specifying the package type and pin definitions directly in HTML:
 
 ```html
 <ic-chip package="DIP14" label="PLA" description="custom" type="pla">
@@ -32,27 +34,21 @@ Define a completely new chip by specifying the package type and pin definitions:
 </ic-chip>
 ```
 
-### Required Attributes
 
+### Required Attributes
 - **`package`**: The package type (e.g., `DIP8`, `DIP14`, `DIP16`, `DIP20`, `DIP24`, `DIP28`, `DIP40`)
-- **`label`**: The chip label that will be displayed on the rendered chip
+- **`label`**: The chip label displayed on the rendered chip
 
 ### Optional Attributes
-
 - **`description`**: Description text (defaults to "custom")
 - **`type`**: Chip type for color coding (e.g., "gate", "cpu", "ram", "pla", etc.)
 
+
 ### Pin Numbering
+Pins can be numbered sequentially (omit `num`) or explicitly (set `num`). Mixing is supported.
 
-Pins can be numbered in two ways:
-
-1. **Sequential (automatic)**: Omit the `num` attribute, and pins are numbered 1, 2, 3, etc.
-2. **Explicit**: Use the `num` attribute to specify exact pin numbers
-
-You can mix both approaches - if you specify `num="4"`, the next pin without a `num` will be pin 5.
 
 ## Extending an Existing Chip
-
 Create a custom version of an existing chip with modified pins:
 
 ```html
@@ -62,48 +58,28 @@ Create a custom version of an existing chip with modified pins:
 </ic-chip>
 ```
 
-### Attributes
 
+### Attributes
 - **`extends`**: The base chip name to extend (must exist in `chips.js`)
 - **`description`**: Optional override description
+Only pins you specify will be overridden; all others use the base chip's definitions.
 
-All pins not specified in `<pin>` elements will use the original chip's pin definitions. Only the pins you specify will be overridden.
 
 ## Pin Element Reference
+The `<pin>` element supports these attributes:
 
-The `<pin>` element supports the following attributes:
 
 ### Pin Number
-
-- **`num`**: Pin number (optional - omit for sequential numbering)
+- **`num`**: Pin number (optional; omit for sequential numbering)
 
 ### Pin Direction
-
-Use **`direction`** or **`dir`** (both work the same):
-
-- `"input"` or `"in"` - Input pin (arrow points into chip)
-- `"output"` or `"out"` - Output pin (arrow points out of chip)
-- `"bidirectional"`, `"io"`, or `"inout"` - Bidirectional pin (both arrows)
+- **`direction`** or **`dir`**: "input", "output", "bidirectional"/"io"/"inout"
 
 ### Pin Type
-
-Use **`type`** to specify the pin's function:
-
-- `"power"` - Power supply pin (⊕ symbol)
-- `"ground"` - Ground pin (⏚ symbol)
-- `"address"` - Address line
-- `"data"` - Data line
-- `"clock"` - Clock signal
-- `"chip-select"` - Chip select
-- `"reset"` - Reset signal
-- `"enable"` - Enable signal
-- `"interrupt"` - Interrupt signal
-- `"nc"` - Not connected
-- `"other"` - Generic pin (default)
+- **`type`**: "power", "ground", "address", "data", "clock", "chip-select", "reset", "enable", "interrupt", "nc", "other"
 
 ### Pin Label
-
-The text content of the `<pin>` element is used as the pin label:
+Text content of `<pin>` is used as the pin label:
 
 ```html
 <pin dir="output">Q0</pin>
@@ -111,11 +87,11 @@ The text content of the `<pin>` element is used as the pin label:
 <pin dir="input" type="chip-select">/CS</pin>
 ```
 
-For power and ground pins, you can omit the text to use default symbols:
 
+For power and ground pins, omit text to use default symbols:
 ```html
-<pin type="power"></pin>     <!-- Uses ⊕ symbol -->
-<pin type="ground"></pin>     <!-- Uses ⏚ symbol -->
+<pin type="power"></pin>     <!-- ⊕ symbol -->
+<pin type="ground"></pin>    <!-- ⏚ symbol -->
 ```
 
 Or provide custom labels:
@@ -268,22 +244,3 @@ Here's a complete HTML file demonstrating custom chips:
   </body>
 </html>
 ```
-
-## Troubleshooting
-
-**Problem**: Chip doesn't render
-- Check that `package` and `label` attributes are both present for new chips
-- Verify the package name exists (e.g., `DIP14`, not `dip14`)
-- Check browser console for error messages
-
-**Problem**: Pin numbering is wrong
-- Remember that without `num` attribute, pins number sequentially from 1
-- If you specify `num="4"`, the next pin will be 5 (unless you specify otherwise)
-
-**Problem**: Extended chip doesn't show changes
-- Verify the base chip name in `extends` exists in `chips.js`
-- Make sure you're using the correct pin numbers for overrides
-
-**Problem**: Symbols don't display correctly
-- Ensure your HTML file is saved with UTF-8 encoding
-- Check that your browser supports Unicode characters

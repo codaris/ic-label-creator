@@ -1,32 +1,32 @@
-# ic-label-creator
+# IC Label Creator
 Javascript/SVG Label Creator for IC Chip Pinouts
 
-<img src="/assets/readme-example-labels.png" />
+<img src="assets/readme-example-labels.png" />
 
+## About This Fork
 
+This project is a fork of the original [ic-label-creator](https://github.com/klemens-u/ic-label-creator) created by Klemens Ullmann-Marx. It has been significantly refactored and extended with new features and improved usability. 
 
-## About
+The original project was inspired by Ben Eater's 8-Bit breadboard computer.
 
-This project was inspired by Ben Eater's 8-Bit breadboard computer. Multiple wiring errors while building the SAP-1 breadboard computer lead to the desire to label all chips with the actual pinouts.
-
-## Participation
-
-I'd be happy to accept pull request for other projects  additions to the "chip database" and general ideas and improvements.
-You're also welcome to adapt the script for your own project. If you spot errors, please report them as issue or pull request too.
+### Key Features
+- **No build step required**: Use modern Web Components for easy configuration in pure HTML
+- **Custom chip definitions**: Define chips directly in markup or extend existing ones
+- **Comprehensive pin metadata**: Specify direction, type, and color for each pin
+- **SVG-based rendering**: High-quality printable labels for ICs
+- **Flexible printing**: Print directly from your browser 
+- **Extensible chip database**: Easily add new chips or contribute improvements
 
 ## Usage
 
-How to create your own set of chips:
+### Quick Start
+1. Copy `ben-eater-8bit-computer.html` or `index.html` to a new file (e.g., `your-set.html`)
+2. Add `<ic-chip>` elements for each chip you want to print
+3. If a chip is missing from `chips.js`, define it in markup or add it to the database
+4. Open your HTML file in a browser and print on self-adhesive labels
+5. Contribute new sets or chips via pull request
 
-- Copy "ben-eater-8bit-computer.html" to a new file e.g. "your-set.html"
-- Add the chips you'd like to print to the section "Draw chips"
-- If you miss a chip's definitions in "chips.js" please add them and perform a pull request to contribute.
-- Open your-set.html file in a web browser and print on self-sticking print labels. I used Firefox.
-- If you create a set for public project please contribute it with a pull request
-
-## New: Web Components (no build step)
-
-You can now declare pages using custom elements in pure HTML with no build tools. See `index2.html` for a minimal example. The page configuration looks like this:
+### Basic Example
 
 ```html
 <ic-labels paper="Letter" margins="10 10 10 10">
@@ -41,76 +41,53 @@ You can now declare pages using custom elements in pure HTML with no build tools
 	<ic-chip>28C256</ic-chip>
 	<ic-chip>62256</ic-chip>
 	<ic-chip>W65C51</ic-chip>
-	<!-- count attribute repeats a chip -->
-	<!-- paper: A4 or Letter; margins in mm as 1-4 CSS-like values -->
-	<!-- Rendering still uses the legacy drawChip() from ic-label-creator.js -->
-	<!-- Note: currently supports a single <ic-labels> per page due to legacy #page target. -->
-	<!-- To print, use your browser's Print dialog. -->
-	<!-- Works when opened as a local file. -->
 </ic-labels>
 ```
 
-### Custom Chip Definitions
-
-You can now define custom chips directly in markup without modifying `chips.js`. Two approaches are supported:
-
-#### Creating a New Custom Chip
-
-Define a completely new chip by specifying the package type and pin definitions:
+#### Custom Chip Definitions
+You can define chips directly in HTML:
 
 ```html
 <ic-chip package="DIP14" label="PLA" description="custom" type="pla">
-  <pin type="power"></pin>
-  <pin type="address">A0</pin>
-  <pin direction="output">O0</pin>
-  <pin num="4" dir="output">O1</pin>
-  <pin dir="input" type="address">A1</pin>
-  <pin dir="input" type="address">A2</pin>
-  <pin type="ground"></pin>
-  <pin dir="output">O2</pin>
-  <pin dir="output">O3</pin>
-  <pin dir="input" type="address">A3</pin>
-  <pin dir="input" type="address">A4</pin>
-  <pin dir="input" type="chip-select">/CS</pin>
-  <pin dir="input" type="enable">/EN</pin>
-  <pin dir="output">O4</pin>
+	<pin type="power"></pin>
+	<pin type="address">A0</pin>
+	<pin direction="output">O0</pin>
+	<pin num="4" dir="output">O1</pin>
+	<pin dir="input" type="address">A1</pin>
+	<pin dir="input" type="address">A2</pin>
+	<pin type="ground"></pin>
+	<pin dir="output">O2</pin>
+	<pin dir="output">O3</pin>
+	<pin dir="input" type="address">A3</pin>
+	<pin dir="input" type="address">A4</pin>
+	<pin dir="input" type="chip-select">/CS</pin>
+	<pin dir="input" type="enable">/EN</pin>
+	<pin dir="output">O4</pin>
 </ic-chip>
 ```
 
-**Attributes:**
-- `package`: Package type (e.g., DIP14, DIP16, DIP20)
-- `label`: The chip label that will be displayed
-- `description`: Description text (optional, defaults to "custom")
-- `type`: Chip type for color coding (optional, e.g., "pla", "gate", "cpu")
-
-**Pin Element Attributes:**
-- `num`: Pin number (optional - if omitted, pins are numbered sequentially starting from 1)
-- `direction` or `dir`: Pin direction - "input"/"in", "output"/"out", or "bidirectional"/"io"
-- `type`: Pin type - "power", "ground", "address", "data", "clock", "chip-select", "reset", "enable", "interrupt", "nc", or "other"
-
-**Pin Types:**
-- `type="power"`: Power pin (default symbol ⊕, can override with text content)
-- `type="ground"`: Ground pin (default symbol ⏚, can override with text content)
-- Other types use the text content as the pin label
-
-#### Extending an Existing Chip
-
-Create a custom version of an existing chip with modified pins:
+#### Extending Existing Chips
+Override pins or properties of a chip from the database:
 
 ```html
 <ic-chip extends="74LS08" description="custom">
-  <pin num="5">A0</pin>
+	<pin num="5">A0</pin>
 </ic-chip>
 ```
 
-This renders a chip like the 74LS08 but with pin 5 labeled "A0" instead of its original label. All other pins and properties remain the same.
+See `CUSTOM_CHIPS_GUIDE.md` for full details.
 
-**Attributes:**
-- `extends`: The base chip name to extend
-- `description`: Optional override description
-- Pins specified in markup will override the base chip's pins
+## Pin Metadata System
 
-Type checking in editors: the new component module (`ic-web-components.js`) enables `//@ts-check` and ships `types/global.d.ts` so VS Code can catch type errors without a build step. No transpilation required.
+Define pin direction and type for color-coded, visually distinct labels. See `PIN_METADATA_GUIDE.md` for all options and helper functions.
+
+## Printing
+
+Open your HTML file in Firefox or Chrome and use the browser's Print dialog. Labels are optimized for self-adhesive sheets.
+
+## Contributing
+
+Pull requests are welcome for new chips, features, or documentation improvements. Please see the guides in this repo for details.
 
 ## Background and Acknowledgements
 
