@@ -1,7 +1,8 @@
 // @ts-check
 /**
- * IC Label Creator - Consolidated
- * (C) Klemens Ullmann-Marx / www.ull.at
+ * IC Label Creator 
+ * Klemens Ullmann-Marx / www.ull.at
+ * Wayne Venables / www.codaris.com
  * License: GPLv3
  * 
  * Creates printable IC chip labels with pinouts using declarative web components.
@@ -252,13 +253,11 @@
         };
     }
 
-    // (Removed legacy window.globals initialization; configuration now lives on <ic-labels> attributes)
-
     // ============================================================================
-    // CHIP RENDERING ENGINE (Legacy compatible)
+    // CHIP RENDERING ENGINE
     // ============================================================================
 
-    /** Create SVG element with attributes (jQuery wrapper) */
+    /** Create SVG element with attributes */
     function createSVGElement(/** @type {string} */ tag, /** @type {Record<string, any>} */ attrs = {}) {
         // @ts-ignore - jQuery
         return $(document.createElementNS("http://www.w3.org/2000/svg", tag)).attr(attrs);
@@ -267,7 +266,6 @@
     /** Reset the SVG page and chip positioning */
     function clearPage() {
         const svg = document.getElementById('page');
-        // Modern and concise: remove all children at once
         svg?.replaceChildren();
     }
 
@@ -308,19 +306,16 @@
         // @ts-ignore - jQuery is loaded globally
         const { svgChip, pinData, side, x, chipHeight, chipWidth } = config;
 
-        // Parse pin data: can be string (old format) or [label, direction, type] (new format)
         let pinName, pinMode, pinType;
         if (Array.isArray(pinData)) {
-            // New format: [label, direction, type]
             const [label, direction, type] = pinData;
             pinName = label;
             pinMode = direction;
             pinType = type;
         } else {
-            // Old format: just a string (backward compatibility)
             pinName = pinData;
-            pinMode = 'input'; // default
-            pinType = 'other'; // default
+            pinMode = 'input';
+            pinType = 'other';
         }
 
         let activeLow = false;
@@ -497,9 +492,6 @@
         const labelTargetWidth = Math.max(0, chipWidth - 2 * labelHMargin);
         const labelFontSize = Math.max(1.0, chipHeight * 0.32); // balanced size to avoid crowding pin labels
 
-        // Create the chip label text element
-        // We only compress long labels to fit; we do NOT expand short labels to fill the width
-        // This keeps small chips looking the same and avoids overly wide text on large chips
         const labelTextEl = createSVGElement('text', {
             x: '50%',
             y: chipHeight / 2 + 'mm',
@@ -572,8 +564,6 @@
             config.chipPositionX += 50;
         }
     }
-
-    // drawChip is used internally by the web component; no global export required
 
     // ============================================================================
     // WEB COMPONENTS
@@ -658,7 +648,6 @@
             const paperAttr = this.getAttribute('paper') || 'Letter';
             this._paper = (paperAttr === 'A4' ? 'A4' : 'Letter');
             this._margins = parseMargins(this.getAttribute('margins'), this._margins);
-            // Read optional rendering attributes (support camelCase and lowercase)
             /** @type {(name: string) => (string|null)} */
             const readAttr = (name) => this.getAttribute(name) ?? this.getAttribute(name.toLowerCase());
             /** @type {(s: string|null|undefined, d: number) => number} */
@@ -667,7 +656,7 @@
             const b = (s, d) => {
                 if (s == null) return d;
                 const v = String(s).toLowerCase();
-                if (v === '') return true; // presence-only boolean
+                if (v === '') return true;
                 if (v === 'false' || v === '0' || v === 'no') return false;
                 if (v === 'true' || v === '1' || v === 'yes') return true;
                 return d;
@@ -682,7 +671,6 @@
             const pff = readAttr('pinFontFamily');
             this._pinFontFamily = pff && String(pff).trim().length ? String(pff) : undefined;
 
-            // Build DOM structure (light DOM for jQuery compatibility)
             this._wrap = document.createElement('div');
             this._wrap.className = 'ic-paper-wrap';
 
@@ -751,7 +739,6 @@
             this._svg.style.left = mm(this._margins.left);
             this._svg.style.top = mm(this._margins.top);
 
-            // Build rendering configuration (replaces window.globals)
             /** @type {RenderConfig} */
             const config = {
                 pageWidth: contentW,
