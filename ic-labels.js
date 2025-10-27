@@ -463,8 +463,11 @@
         const labelTargetWidth = Math.max(0, chipWidth - 2 * labelHMargin);
         const labelFontSize = Math.max(1.0, chipHeight * 0.32); // balanced size to avoid crowding pin labels
 
+        // Create the chip label text element
+        // We only compress long labels to fit; we do NOT expand short labels to fill the width
+        // This keeps small chips looking the same and avoids overly wide text on large chips
         // @ts-ignore - jQuery
-        svgChip.append($(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
+        const labelTextEl = $(document.createElementNS("http://www.w3.org/2000/svg", 'text'))
             .html(`${displayName} ${chip.description}`)
             .attr({
                 x: '50%',
@@ -475,12 +478,30 @@
                 'font-size': labelFontSize + 'mm',
                 'font-weight': 600,
                 'letter-spacing': '0.05mm',
-                lengthAdjust: 'spacingAndGlyphs',
-                textLength: labelTargetWidth + 'mm',
                 fill: getChipColor(chip.type, config.gimmeColor),
                 'fill-opacity': 0.35
-            })
-        );
+            });
+
+        // Append first so we can measure the natural width
+        // @ts-ignore - jQuery
+        svgChip.append(labelTextEl);
+
+        try {
+            // Convert mm to px for comparison with getComputedTextLength()
+            const pxPerMm = 96 / 25.4;
+            const maxPx = labelTargetWidth * pxPerMm;
+            // @ts-ignore - jQuery
+            const naturalPx = /** @type {SVGTextContentElement} */(labelTextEl.get(0)).getComputedTextLength();
+            if (isFinite(naturalPx) && naturalPx > maxPx) {
+                // Only compress if too wide; do not expand if shorter than target
+                labelTextEl.attr({
+                    lengthAdjust: 'spacingAndGlyphs',
+                    textLength: labelTargetWidth + 'mm'
+                });
+            }
+        } catch (e) {
+            // If measurement fails (e.g., some environments), fall back to no expansion
+        }
 
         // Draw all pins
         // Center pin train along chip length so edge spacing looks consistent across packages
