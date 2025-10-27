@@ -50,6 +50,66 @@ You can now declare pages using custom elements in pure HTML with no build tools
 </ic-labels>
 ```
 
+### Custom Chip Definitions
+
+You can now define custom chips directly in markup without modifying `chips.js`. Two approaches are supported:
+
+#### Creating a New Custom Chip
+
+Define a completely new chip by specifying the package type and pin definitions:
+
+```html
+<ic-chip package="DIP14" label="PLA" description="custom" type="pla">
+  <pin type="power"></pin>
+  <pin type="address">A0</pin>
+  <pin direction="output">O0</pin>
+  <pin num="4" dir="output">O1</pin>
+  <pin dir="input" type="address">A1</pin>
+  <pin dir="input" type="address">A2</pin>
+  <pin type="ground"></pin>
+  <pin dir="output">O2</pin>
+  <pin dir="output">O3</pin>
+  <pin dir="input" type="address">A3</pin>
+  <pin dir="input" type="address">A4</pin>
+  <pin dir="input" type="chip-select">/CS</pin>
+  <pin dir="input" type="enable">/EN</pin>
+  <pin dir="output">O4</pin>
+</ic-chip>
+```
+
+**Attributes:**
+- `package`: Package type (e.g., DIP14, DIP16, DIP20)
+- `label`: The chip label that will be displayed
+- `description`: Description text (optional, defaults to "custom")
+- `type`: Chip type for color coding (optional, e.g., "pla", "gate", "cpu")
+
+**Pin Element Attributes:**
+- `num`: Pin number (optional - if omitted, pins are numbered sequentially starting from 1)
+- `direction` or `dir`: Pin direction - "input"/"in", "output"/"out", or "bidirectional"/"io"
+- `type`: Pin type - "power", "ground", "address", "data", "clock", "chip-select", "reset", "enable", "interrupt", "nc", or "other"
+
+**Pin Types:**
+- `type="power"`: Power pin (default symbol ⊕, can override with text content)
+- `type="ground"`: Ground pin (default symbol ⏚, can override with text content)
+- Other types use the text content as the pin label
+
+#### Extending an Existing Chip
+
+Create a custom version of an existing chip with modified pins:
+
+```html
+<ic-chip extends="74LS08" description="custom">
+  <pin num="5">A0</pin>
+</ic-chip>
+```
+
+This renders a chip like the 74LS08 but with pin 5 labeled "A0" instead of its original label. All other pins and properties remain the same.
+
+**Attributes:**
+- `extends`: The base chip name to extend
+- `description`: Optional override description
+- Pins specified in markup will override the base chip's pins
+
 Type checking in editors: the new component module (`ic-web-components.js`) enables `//@ts-check` and ships `types/global.d.ts` so VS Code can catch type errors without a build step. No transpilation required.
 
 ## Background and Acknowledgements

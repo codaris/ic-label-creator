@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IC Label Creator — Web Components</title>
+    <title>IC Label Creator</title>
     <script
       src="https://code.jquery.com/jquery-3.4.1.min.js"
       integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
@@ -13,12 +13,51 @@
   </head>
   <body>
     <ic-labels paper="Letter" margins="10 10 10 10">
+      <!-- Standard chips from chips.js -->
       <ic-chip>555</ic-chip>
       <ic-chip count="2">555</ic-chip>
       <ic-chip>74LS04</ic-chip>
       <ic-chip>74LS08</ic-chip>
       <ic-chip>74LS32</ic-chip>
       <ic-chip>74LS00</ic-chip>
+      
+      <!-- Custom chip example 1: completely new chip with DIP14 package -->
+      <!-- Demonstrates sequential pin numbering (pins without num attribute) -->
+      <ic-chip package="DIP14" label="PLA" description="custom" type="other">
+        <pin type="power"></pin>
+        <pin type="address">A0</pin>
+        <pin direction="output">O0</pin>
+        <pin num="4" dir="output">O1</pin>
+        <pin dir="input" type="address">A1</pin>
+        <pin dir="input" type="address">A2</pin>
+        <pin type="ground"></pin>
+        <pin dir="output">O2</pin>
+        <pin dir="output">O3</pin>
+        <pin dir="input" type="address">A3</pin>
+        <pin dir="input" type="address">A4</pin>
+        <pin dir="input" type="chip-select">/CS</pin>
+        <pin dir="input" type="enable">/EN</pin>
+        <pin dir="output">O4</pin>
+      </ic-chip>
+      
+      <!-- Custom chip example 2: extends existing chip with one pin override -->
+      <ic-chip extends="74LS08" description="custom">
+        <pin num="5">A0</pin>
+      </ic-chip>
+      
+      <!-- Custom chip example 3: DIP8 custom chip -->
+      <ic-chip package="DIP8" label="CUSTOM8" description="test" type="gate">
+        <pin type="power"></pin>
+        <pin dir="in">IN1</pin>
+        <pin dir="in">IN2</pin>
+        <pin dir="out">OUT</pin>
+        <pin type="ground"></pin>
+        <pin dir="in">EN</pin>
+        <pin dir="io" type="data">D0</pin>
+        <pin dir="io" type="data">D1</pin>
+      </ic-chip>
+      
+      <!-- Standard chips continued -->
       <ic-chip>W65C02</ic-chip>
       <ic-chip>W65C22</ic-chip>
       <ic-chip>28C256</ic-chip>

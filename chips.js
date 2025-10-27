@@ -1,7 +1,6 @@
 /*
  * Chip library
-  '74LS153' : {
- *
+*
  * Create overlines with a leading slash "/"
  * Example: "/EN"
  *
@@ -14,6 +13,7 @@
  * (C) Klemens Ullmann-Marx / www.ull.at and contributors
  * License: GPLv3
  */
+
 
 // ============================================================================
 // PIN SPECIFICATION HELPERS
@@ -69,14 +69,15 @@ function gnd(label = '⏚') {
     return [label, 'input', 'ground'];
 }
 
+
 // ============================================================================
 // PACKAGE DEFINITIONS
 // ============================================================================
 
 // Standard DIP package definitions
-// pins: total pin count
 var packages = {
     // Typical dimensions (approximate) in millimeters for common DIP packages
+    // pins: total pin count
     // pinPitch: distance between adjacent pins on a side (2.54mm typical)
     // rowSpacing: distance between pin rows (aka package width across pins)
     // bodyLength: approximate plastic body length
@@ -97,10 +98,16 @@ var packages = {
     DIP48: { pins: 48, pinPitch: 2.54, rowSpacing: 15.24, bodyLength: 58.42, bodyWidth: 15.24 }
 };
 
+
+// ============================================================================
+// CHIP DEFINITIONS
+// ============================================================================
+
+// Standard chip definitions
 var chips = {
 
     '74LS00': {
-        description: '4xNAND',
+        description: 'NAND',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -123,7 +130,7 @@ var chips = {
     },
 
     '74LS02': {
-        description: '4xNOR',
+        description: 'NOR',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -146,7 +153,7 @@ var chips = {
     },
 
     '74LS04': {
-        description: '6xNOT',
+        description: 'NOT',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -169,7 +176,7 @@ var chips = {
     },
 
     '74LS07': {
-        description: '6x Buffer',
+        description: 'Buffer',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -192,7 +199,7 @@ var chips = {
     },
 
     '74LS08': {
-        description: '4xAND',
+        description: 'AND',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -215,7 +222,7 @@ var chips = {
     },
 
     '74LS14': {
-        description: '6x⎎NOT',
+        description: 'NOT',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -238,7 +245,7 @@ var chips = {
     },
 
     '74LS32': {
-        description: '4xOR',
+        description: 'OR',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -261,7 +268,7 @@ var chips = {
     },
 
     '74LS86': {
-        description: '4xXOR',
+        description: 'XOR',
         type: 'gate',
         package: 'DIP14',
         pins: {
@@ -284,7 +291,7 @@ var chips = {
     },
 
     '74LS107': {
-        description: '2xJK-FF',
+        description: 'JK-FF',
         type: 'flipflop',
         package: 'DIP14',
         pins: {
@@ -307,7 +314,7 @@ var chips = {
     },
 
     '74LS138': {
-        description: '3to8 Decod',
+        description: '3to8 Demux',
         type: 'demux',
         package: 'DIP16',
         pins: {
@@ -332,7 +339,7 @@ var chips = {
     },
 
     '74LS139': {
-        description: '2x2to4 Dec',
+        description: '2x2to4 Demux',
         type: 'demux',
         package: 'DIP16',
         pins: {
@@ -408,7 +415,7 @@ var chips = {
     },
 
     '74LS161': {
-        description: '4bit Count',
+        description: '4bit Counter',
         type: 'counter',
         package: 'DIP16',
         pins: {
@@ -433,7 +440,7 @@ var chips = {
     },
 
     '74LS169': {
-        description: '4b Cnt ↑/↓',
+        description: '4bit Counter ↑/↓',
         type: 'counter',
         package: 'DIP16',
         pins: {
@@ -458,7 +465,7 @@ var chips = {
     },
 
     '74LS173': {
-        description: '4bit Regist.',
+        description: '4bit Register',
         datasheet: 'http://www.ti.com/lit/ds/symlink/sn54173.pdf',
         type: 'register',
         package: 'DIP16',
@@ -509,7 +516,7 @@ var chips = {
     },
 
     '74LS193': {
-        description: '4b Cnt ↑/↓',
+        description: '4bit Counter ↑/↓',
         type: 'counter',
         package: 'DIP16',
         pins: {
@@ -535,7 +542,7 @@ var chips = {
 
 
     '74LS244': {
-        description: '8bit Buf/Linedrv',
+        description: '8bit Buffer',
         type: 'buffer',
         package: 'DIP20',
         pins: {
@@ -564,7 +571,7 @@ var chips = {
     },
 
     '74LS245': {
-        description: '8bit Bus Transcv',
+        description: '8bit Bus Transceiver',
         type: 'bus-transceiver',
         package: 'DIP20',
         pins: {

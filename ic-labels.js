@@ -761,10 +761,46 @@
 
             updatePrintPageSize(this._paper);
             clearPage();
+            
+            /** @type {ICWindow} */
+            const W = /** @type {ICWindow} */ (window);
+            if (!W.chips) W.chips = {};
+            const chipRegistry = W.chips;
+            
             const chipElements = this.querySelectorAll('ic-chip');
+            
+            // First pass: register any custom chips defined in markup
             chipElements.forEach(chip => {
-                const chipName = (chip.textContent || '').trim();
+                const hasPackage = chip.hasAttribute('package');
+                const hasExtends = chip.hasAttribute('extends');
+                
+                if (hasPackage || hasExtends) {
+                    const customChip = buildCustomChipFromMarkup(chip);
+                    if (customChip) {
+                        // Register the custom chip in the global registry
+                        chipRegistry[customChip.chipName] = customChip.chipDef;
+                    }
+                }
+            });
+            
+            // Second pass: render all chips
+            chipElements.forEach(chip => {
+                // Determine chip name - use label for custom chips, or text content for standard chips
+                let chipName = '';
+                const labelAttr = chip.getAttribute('label');
+                const extendsAttr = chip.getAttribute('extends');
+                const hasPackage = chip.hasAttribute('package');
+                
+                if (labelAttr) {
+                    chipName = labelAttr;
+                } else if (extendsAttr) {
+                    chipName = extendsAttr;
+                } else {
+                    chipName = (chip.textContent || '').trim();
+                }
+                
                 if (!chipName) return;
+                
                 const family = chip.getAttribute('family') || chip.getAttribute('type') || undefined;
                 const series = chip.getAttribute('series') || undefined;
                 const count = Math.max(1, Math.floor(Number(chip.getAttribute('count')) || 1));
@@ -773,6 +809,151 @@
                 }
             });
         }
+    }
+
+    /**
+     * Parse a <pin> element to create a pin specification
+     * @param {Element} pinEl - The <pin> element
+     * @param {number} pinNum - Pin number
+     * @returns {PinSpec}
+     */
+    function parsePinElement(pinEl, pinNum) {
+        // Get pin direction - support both 'direction' and 'dir' attributes
+        let direction = pinEl.getAttribute('direction') || pinEl.getAttribute('dir') || '';
+        
+        // Get pin type
+        let type = pinEl.getAttribute('type') || 'other';
+        
+        // Get pin label - use textContent if provided, otherwise empty
+        let label = (pinEl.textContent || '').trim();
+        
+        // Handle special type cases using global helper functions if available
+        if (type === 'power') {
+            // @ts-ignore - global function from chips.js
+            if (typeof window.pwr === 'function') {
+                // @ts-ignore - global function from chips.js
+                return window.pwr(label || undefined);
+            }
+            return [label || '⊕', 'input', 'power'];
+        }
+        if (type === 'ground') {
+            // @ts-ignore - global function from chips.js
+            if (typeof window.gnd === 'function') {
+                // @ts-ignore - global function from chips.js
+                return window.gnd(label || undefined);
+            }
+            return [label || '⏚', 'input', 'ground'];
+        }
+              
+        // Normalize direction
+        direction = direction.toLowerCase();
+        if (direction === 'in') direction = 'input';
+        if (direction === 'out') direction = 'output';
+        if (direction === 'io' || direction === 'inout') direction = 'bidirectional';
+        
+        // Validate direction
+        if (direction !== 'input' && direction !== 'output' && direction !== 'bidirectional') {
+            direction = 'input'; // default
+        }
+        
+        // Normalize type
+        type = type.toLowerCase();
+        const validTypes = ['power', 'ground', 'address', 'data', 'clock', 'chip-select', 'reset', 'enable', 'interrupt', 'nc', 'other'];
+        if (!validTypes.includes(type)) type = 'other';      
+        return [label, /** @type {PinDirection} */ (direction), /** @type {PinType} */ (type)];
+    }
+    
+    /**
+     * Build a custom chip definition from markup
+     * @param {Element} chipEl - The <ic-chip> element
+     * @returns {{chipName: string, chipDef: Chip} | null}
+     */
+    function buildCustomChipFromMarkup(chipEl) {
+        const packageAttr = chipEl.getAttribute('package');
+        const extendsAttr = chipEl.getAttribute('extends');
+        const labelAttr = chipEl.getAttribute('label');
+        const descriptionAttr = chipEl.getAttribute('description') || 'custom';
+        const typeAttr = chipEl.getAttribute('type') || 'other';
+        
+        /** @type {ICWindow} */
+        const W = /** @type {ICWindow} */ (window);
+        const chipRegistry = W.chips || {};
+        
+        let chipDef = /** @type {Chip} */ ({
+            description: descriptionAttr,
+            type: /** @type {ChipType} */ (typeAttr),
+            pins: {}
+        });
+        
+        // Handle "extends" scenario - copy from existing chip
+        if (extendsAttr) {
+            const baseChip = chipRegistry[extendsAttr];
+            if (!baseChip) {
+                console.error(`Cannot extend unknown chip: ${extendsAttr}`);
+                return null;
+            }
+            
+            // Clone base chip
+            chipDef = {
+                description: descriptionAttr || baseChip.description,
+                type: baseChip.type,
+                package: baseChip.package,
+                pins: { ...baseChip.pins }
+            };
+            
+            // Use label or extends name as chip name
+            const chipName = labelAttr || extendsAttr;
+            
+            // Override specific pins from markup
+            const pinElements = chipEl.querySelectorAll('pin');
+            pinElements.forEach(pinEl => {
+                const numAttr = pinEl.getAttribute('num');
+                if (numAttr) {
+                    const pinNum = parseInt(numAttr, 10);
+                    chipDef.pins[pinNum] = parsePinElement(pinEl, pinNum);
+                }
+            });
+            
+            return { chipName, chipDef };
+        }
+        
+        // Handle "package" scenario - build from scratch
+        if (packageAttr && labelAttr) {
+            chipDef.package = packageAttr;
+            
+            const packageRegistry = W.packages || {};
+            const pkg = packageRegistry[packageAttr];
+            if (!pkg) {
+                console.error(`Unknown package: ${packageAttr}`);
+                return null;
+            }
+            
+            const totalPins = pkg.pins;
+            const pinElements = Array.from(chipEl.querySelectorAll('pin'));
+            
+            let currentPinNum = 1;
+            
+            pinElements.forEach(pinEl => {
+                const numAttr = pinEl.getAttribute('num');
+                let pinNum;
+                
+                if (numAttr) {
+                    pinNum = parseInt(numAttr, 10);
+                    currentPinNum = pinNum + 1;
+                } else {
+                    pinNum = currentPinNum;
+                    currentPinNum++;
+                }
+                
+                if (pinNum >= 1 && pinNum <= totalPins) {
+                    chipDef.pins[pinNum] = parsePinElement(pinEl, pinNum);
+                }
+            });
+            
+            return { chipName: labelAttr, chipDef };
+        }
+        
+        return null;
     }
 
     /**
