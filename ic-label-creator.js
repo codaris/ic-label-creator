@@ -30,7 +30,8 @@
      *  svgStrokeOffset:number,
      *  defaultChipLogicFamily:string,
      *  defaultChipSeries:string,
-     *  gimmeColor:boolean,
+     *  pinColor:boolean,
+     *  chipColor:boolean,
      *  pinFontFamily?:string
      * }} RenderConfig */
     /** @typedef {{defaultChipLogicFamily:string, defaultChipSeries:string}} ChipNameDefaults */
@@ -51,6 +52,7 @@
      *  x: number,
      *  chipHeight: number,
      *  chipWidth: number,
+     *  pinColor: boolean,
      *  pinFontFamily?: string
      * }} PinRenderConfig */
 
@@ -173,13 +175,14 @@
     const CHIP_TYPE_COLOR_MAP = Object.fromEntries(CHIP_TYPE_COLOR_PALETTE.map(({ type, color }) => [type, color]));
 
     /** Get color for a pin type with safe fallback */
-    function getPinColorByType(/** @type {PinType|string} */ type) {
+    function getPinColorByType(/** @type {PinType|string} */ type, /** @type {boolean} */ pinColor) {
+        if (!pinColor) return 'black';
         return PIN_TYPE_COLOR_MAP[type] ?? PIN_TYPE_COLOR_MAP.other ?? '#000000';
     }
 
     /** Get color for a chip type with safe fallback */
-    function getChipColorByType(/** @type {ChipType|string} */ chipType, /** @type {boolean} */ gimmeColor) {
-        if (!gimmeColor) return 'black';
+    function getChipColorByType(/** @type {ChipType|string} */ chipType, /** @type {boolean} */ chipColor) {
+        if (!chipColor) return 'black';
         return CHIP_TYPE_COLOR_MAP[chipType] ?? CHIP_TYPE_COLOR_MAP.other ?? 'black';
     }
 
@@ -330,7 +333,7 @@
         const yPos = Math.min(x + yOffset, Math.max(0, chipWidth - edgeMargin));
 
         // Look up pin color from type
-        const pinColor = getPinColorByType(pinType);
+        const pinColor = getPinColorByType(pinType, config.pinColor);
 
         // Draw pin-direction indicator on chip edge
         const squareWidth = 0.8; // mm - width of indicator
@@ -501,7 +504,7 @@
             'font-size': labelFontSize + 'mm',
             'font-weight': 600,
             'letter-spacing': '0.05mm',
-            fill: getChipColorByType(chip.type, config.gimmeColor),
+            fill: getChipColorByType(chip.type, config.chipColor),
             'fill-opacity': 0.35
         }).html(`${displayName} ${chip.description}`);
 
@@ -546,6 +549,7 @@
                 x: pinX,
                 chipHeight,
                 chipWidth,
+                pinColor: config.pinColor,
                 pinFontFamily: config.pinFontFamily,
             });
 
@@ -594,7 +598,8 @@
         /** @type {number} */ _svgStrokeOffset = 0.1;
         /** @type {string} */ _defaultChipLogicFamily = 'LS';
         /** @type {string} */ _defaultChipSeries = '74';
-        /** @type {boolean} */ _gimmeColor = true;
+        /** @type {boolean} */ _pinColor = true;
+        /** @type {boolean} */ _chipColor = true;
         /** @type {string|undefined} */ _pinFontFamily = undefined;
         /** @type {HTMLDivElement|null} */ _wrap = null;
         /** @type {HTMLDivElement|null} */ _shadowDiv = null;
@@ -607,7 +612,7 @@
             return [
                 'paper', 'margins',
                 'pindistance', 'heightsizeadjust', 'svgstrokewidth', 'svgstrokeoffset',
-                'defaultchiplogicfamily', 'defaultchipseries', 'gimmecolor', 'pinfontfamily',
+                'defaultchiplogicfamily', 'defaultchipseries', 'pincolor', 'chipcolor', 'pinfontfamily',
             ];
         }
 
@@ -626,9 +631,13 @@
                 svgstrokeoffset: () => { const v = parseNum(newVal); if (v !== null) this._svgStrokeOffset = v; },
                 defaultchiplogicfamily: () => { this._defaultChipLogicFamily = String(newVal || 'LS'); },
                 defaultchipseries: () => { this._defaultChipSeries = String(newVal || '74'); },
-                gimmecolor: () => {
+                pincolor: () => {
                     const s = (newVal ?? '').toLowerCase();
-                    this._gimmeColor = !(s === 'false' || s === '0' || s === 'no');
+                    this._pinColor = !(s === 'false' || s === '0' || s === 'no');
+                },
+                chipcolor: () => {
+                    const s = (newVal ?? '').toLowerCase();
+                    this._chipColor = !(s === 'false' || s === '0' || s === 'no');
                 },
                 pinfontfamily: () => {
                     const v = newVal?.trim();
@@ -667,7 +676,8 @@
             this._svgStrokeOffset = n(readAttr('svgStrokeOffset'), this._svgStrokeOffset);
             this._defaultChipLogicFamily = String(readAttr('defaultChipLogicFamily') ?? this._defaultChipLogicFamily);
             this._defaultChipSeries = String(readAttr('defaultChipSeries') ?? this._defaultChipSeries);
-            this._gimmeColor = b(readAttr('gimmeColor'), this._gimmeColor);
+            this._pinColor = b(readAttr('pinColor'), this._pinColor);
+            this._chipColor = b(readAttr('chipColor'), this._chipColor);
             const pff = readAttr('pinFontFamily');
             this._pinFontFamily = pff && String(pff).trim().length ? String(pff) : undefined;
 
@@ -751,7 +761,8 @@
                 svgStrokeOffset: this._svgStrokeOffset,
                 defaultChipLogicFamily: this._defaultChipLogicFamily,
                 defaultChipSeries: this._defaultChipSeries,
-                gimmeColor: this._gimmeColor,
+                pinColor: this._pinColor,
+                chipColor: this._chipColor,
                 pinFontFamily: this._pinFontFamily,
             };
 

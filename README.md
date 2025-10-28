@@ -45,13 +45,14 @@ You can customize the output using the following attributes on the `<ic-labels>`
 | `svgStrokeOffset`        | number  | `0.1`     | Stroke offset for SVG outlines in mm. |
 | `defaultChipLogicFamily` | string  | `LS`      | Default logic family for chips. |
 | `defaultChipSeries`      | string  | `74`      | Default chip series. |
-| `gimmeColor`             | boolean | `true`    | Enables color coding for pins and chips. Set to `false` to disable. |
+| `pinColor`               | boolean | `true`    | Enables color coding for pins. Set to `false` to render pins in black. |
+| `chipColor`              | boolean | `true`    | Enables color coding for chip labels. Set to `false` to render chip labels in black. |
 | `pinFontFamily`          | string  | *(unset)* | Font family for pin labels. |
 
 All attributes are optional. If omitted, defaults are used. Example:
 
 ```html
-<ic-labels paper="A4" margins="12 12 12 12" pinDistance="2.54" gimmeColor="false">
+<ic-labels paper="A4" margins="12 12 12 12" pinDistance="2.54" pinColor="false" chipColor="false">
   <!-- chip definitions -->
 </ic-labels>
 ```
