@@ -57,8 +57,6 @@ All attributes are optional. If omitted, defaults are used. Example:
 ```
 
 See `index.html` for more usage examples.
-</ic-labels>
-```
 
 #### Custom Chip Definitions
 You can define chips directly in HTML:
