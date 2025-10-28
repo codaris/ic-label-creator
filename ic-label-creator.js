@@ -680,6 +680,15 @@
             const paperAttr = this.getAttribute('paper') || 'Letter';
             this._paper = (paperAttr === 'A4' ? 'A4' : 'Letter');
             this._margins = parseMargins(this.getAttribute('margins'), this._margins);
+            
+            // Read title attribute and update page title
+            const titleAttr = this.getAttribute('title');
+            if (titleAttr) {
+                const baseTitle = 'IC Label Creator';
+                document.title = `${baseTitle} - ${titleAttr}`;
+                // Store title for footer use
+                this.dataset.pageTitle = titleAttr;
+            }
             /** @type {(name: string) => (string|null)} */
             const readAttr = (name) => this.getAttribute(name) ?? this.getAttribute(name.toLowerCase());
             /** @type {(s: string|null|undefined, d: number) => number} */
@@ -1042,10 +1051,14 @@
     }
 
     function createFooter() {
+        // Get title from ic-labels element if available
+        const labelsElement = /** @type {HTMLElement | null} */ (document.querySelector('ic-labels'));
+        const title = labelsElement?.dataset.pageTitle || 'Custom IC Labels';
+        
         return createElementFromHTML(`
             <footer>
-                IC-Label Set "Ben Eater 6502 Breadboard Computer" • Declarative config, preview with zoom, selectable A4/Letter, auto-saved layout, and print fix.<br/>
-                Renders into <code class="kbd">#page</code> using <code class="kbd">drawChip</code>.
+                IC Label Set "${title}" <br/>
+                Created with <a href="https://github.com/codaris/ic-label-creator" target="_blank" rel="noopener">IC Label Creator</a>
             </footer>
         `);
     }
