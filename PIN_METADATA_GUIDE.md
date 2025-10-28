@@ -7,7 +7,10 @@ The IC Label Creator now supports comprehensive pin metadata specification, allo
 - **Pin Type**: semantic function (power, ground, data, address, clock, etc.)
 
 This metadata drives visual rendering:
-- Pin direction controls the indicator rectangle (unfilled=input, filled=output, half-filled=bidirectional)
+- Pin direction controls the indicator rectangle:
+  -  *Unfilled* = input
+  -  *filled* = output
+  -  *half-filled* = bidirectional
 - Pin type controls the color of both the label and indicator
 
 ## Quick Start

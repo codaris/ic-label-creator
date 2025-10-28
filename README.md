@@ -7,10 +7,8 @@ Javascript/SVG Label Creator for IC Chip Pinouts
 
 This project is a fork of the original [ic-label-creator](https://github.com/klemens-u/ic-label-creator) created by Klemens Ullmann-Marx. It has been significantly refactored and extended with new features and improved usability. 
 
-The original project was inspired by Ben Eater's 8-Bit breadboard computer.
-
 ### Key Features
-- **No build step required**: Use modern Web Components for easy configuration in pure HTML
+- **No build step required**: Easy configuration in pure HTML and run locally in your browser.
 - **Custom chip definitions**: Define chips directly in markup or extend existing ones
 - **Comprehensive pin metadata**: Specify direction, type, and color for each pin
 - **SVG-based rendering**: High-quality printable labels for ICs
@@ -23,24 +21,42 @@ The original project was inspired by Ben Eater's 8-Bit breadboard computer.
 1. Copy `ben-eater-8bit-computer.html` or `index.html` to a new file (e.g., `your-set.html`)
 2. Add `<ic-chip>` elements for each chip you want to print
 3. If a chip is missing from `chips.js`, define it in markup or add it to the database
-4. Open your HTML file in a browser and print on self-adhesive labels
-5. Contribute new sets or chips via pull request
+4. Open your HTML file in a browser and print to paper
+
 
 ### Basic Example
 
 ```html
 <ic-labels paper="Letter" margins="10 10 10 10">
-	<ic-chip>555</ic-chip>
-	<ic-chip count="2">555</ic-chip>
-	<ic-chip>74LS04</ic-chip>
-	<ic-chip>74LS08</ic-chip>
-	<ic-chip>74LS32</ic-chip>
-	<ic-chip>74LS00</ic-chip>
-	<ic-chip>W65C02</ic-chip>
-	<ic-chip>W65C22</ic-chip>
-	<ic-chip>28C256</ic-chip>
-	<ic-chip>62256</ic-chip>
-	<ic-chip>W65C51</ic-chip>
+</ic-labels>
+```
+
+### `<ic-labels>` Configuration Options
+
+You can customize the output using the following attributes on the `<ic-labels>` tag:
+
+| Attribute                | Type    | Default   | Description |
+|--------------------------|---------|-----------|-------------|
+| `paper`                  | string  | `Letter`  | Paper size for output. Use `Letter` or `A4`. |
+| `margins`                | string  | `10 10 10 10` | Margins in mm: `top right bottom left`. |
+| `pinDistance`            | number  | `2.54`    | Pin pitch in mm (distance between pins). |
+| `heightSizeAdjust`       | number  | `0`       | Adjusts chip height in mm. |
+| `svgStrokeWidth`         | number  | `0.1`     | Stroke width for SVG outlines in mm. |
+| `svgStrokeOffset`        | number  | `0.1`     | Stroke offset for SVG outlines in mm. |
+| `defaultChipLogicFamily` | string  | `LS`      | Default logic family for chips. |
+| `defaultChipSeries`      | string  | `74`      | Default chip series. |
+| `gimmeColor`             | boolean | `true`    | Enables color coding for pins and chips. Set to `false` to disable. |
+| `pinFontFamily`          | string  | *(unset)* | Font family for pin labels. |
+
+All attributes are optional. If omitted, defaults are used. Example:
+
+```html
+<ic-labels paper="A4" margins="12 12 12 12" pinDistance="2.54" gimmeColor="false">
+  <!-- chip definitions -->
+</ic-labels>
+```
+
+See `index.html` for more usage examples.
 </ic-labels>
 ```
 
@@ -75,23 +91,21 @@ Override pins or properties of a chip from the database:
 </ic-chip>
 ```
 
-See `CUSTOM_CHIPS_GUIDE.md` for full details.
+See [`CUSTOM_CHIPS_GUIDE.md`](CUSTOM_CHIPS_GUIDE.md) for full details.
 
 ## Pin Metadata System
 
-Define pin direction and type for color-coded, visually distinct labels. See `PIN_METADATA_GUIDE.md` for all options and helper functions.
+Define pin direction and type for color-coded, visually distinct labels. See [`PIN_METADATA_GUIDE.md`](PIN_METADATA_GUIDE.md) for all options and helper functions.
 
 ## Printing
 
-Open your HTML file in Firefox or Chrome and use the browser's Print dialog. Labels are optimized for self-adhesive sheets.
+Open your HTML file in Firefox or Chrome and use the browser's Print dialog.
 
 ## Contributing
 
 Pull requests are welcome for new chips, features, or documentation improvements. Please see the guides in this repo for details.
 
-## Background and Acknowledgements
+## Acknowledgements
 
-I used this as an opportunity to learn a bit of SVG and wrote a HTML/Javascript/SVG creator for computer IC chips.
-
-Big thanks to Ben Eater for the wonderful videos on YouTube. I learned so much from it and finally understood how exactly a cpu/computer works.
-
+* [Klemens Ullmann-Marx](https://github.com/klemens-u) for the original version.
+* Ben Eater for his [wonderful video series](https://www.youtube.com/c/BenEater) on YouTube.
