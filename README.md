@@ -39,7 +39,6 @@ You can customize the output using the following attributes on the `<ic-labels>`
 |--------------------------|---------|-----------|-------------|
 | `paper`                  | string  | `Letter`  | Paper size for output. Use `Letter` or `A4`. |
 | `margins`                | string  | `10 10 10 10` | Margins in mm: `top right bottom left`. |
-| `pinDistance`            | number  | `2.54`    | Pin pitch in mm (distance between pins). |
 | `heightSizeAdjust`       | number  | `0`       | Adjusts chip height in mm. |
 | `svgStrokeWidth`         | number  | `0.1`     | Stroke width for SVG outlines in mm. |
 | `svgStrokeOffset`        | number  | `0.1`     | Stroke offset for SVG outlines in mm. |
@@ -52,7 +51,7 @@ You can customize the output using the following attributes on the `<ic-labels>`
 All attributes are optional. If omitted, defaults are used. Example:
 
 ```html
-<ic-labels paper="A4" margins="12 12 12 12" pinDistance="2.54" pinColor="false" chipColor="false">
+<ic-labels paper="A4" margins="12 12 12 12" pinColor="false" chipColor="false">
   <!-- chip definitions -->
 </ic-labels>
 ```

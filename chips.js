@@ -79,23 +79,22 @@ var packages = {
     // Typical dimensions (approximate) in millimeters for common DIP packages
     // pins: total pin count
     // pinPitch: distance between adjacent pins on a side (2.54mm typical)
-    // rowSpacing: distance between pin rows (aka package width across pins)
-    // bodyLength: approximate plastic body length
-    // bodyWidth: approximate plastic body width (use rowSpacing for visual purposes)
-    DIP8: { pins: 8, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 10.16, bodyWidth: 7.62 },
-    DIP10: { pins: 10, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 12.70, bodyWidth: 7.62 },
-    DIP12: { pins: 12, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 15.24, bodyWidth: 7.62 },
-    DIP14: { pins: 14, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 19.30, bodyWidth: 7.62 },
-    DIP16: { pins: 16, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 19.30, bodyWidth: 7.62 },
-    DIP18: { pins: 18, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 22.86, bodyWidth: 7.62 },
-    DIP20: { pins: 20, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 25.40, bodyWidth: 7.62 },
-    DIP22: { pins: 22, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 27.94, bodyWidth: 7.62 },
-    DIP24: { pins: 24, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 30.48, bodyWidth: 7.62 },
-    DIP28: { pins: 28, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 35.56, bodyWidth: 7.62 },
-    DIP32: { pins: 32, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 40.64, bodyWidth: 7.62 },
-    DIP36: { pins: 36, pinPitch: 2.54, rowSpacing: 7.62, bodyLength: 45.72, bodyWidth: 7.62 },
-    DIP40: { pins: 40, pinPitch: 2.54, rowSpacing: 15.24, bodyLength: 50.80, bodyWidth: 15.24 },
-    DIP48: { pins: 48, pinPitch: 2.54, rowSpacing: 15.24, bodyLength: 58.42, bodyWidth: 15.24 }
+    // bodyLength: chip body length in mm
+    // bodyWidth: chip body width in mm
+    DIP8: { pins: 8, pinPitch: 2.54, bodyLength: 10.16, bodyWidth: 7.62 },
+    DIP10: { pins: 10, pinPitch: 2.54, bodyLength: 12.70, bodyWidth: 7.62 },
+    DIP12: { pins: 12, pinPitch: 2.54, bodyLength: 15.24, bodyWidth: 7.62 },
+    DIP14: { pins: 14, pinPitch: 2.54, bodyLength: 19.30, bodyWidth: 7.62 },
+    DIP16: { pins: 16, pinPitch: 2.54, bodyLength: 19.30, bodyWidth: 7.62 },
+    DIP18: { pins: 18, pinPitch: 2.54, bodyLength: 22.86, bodyWidth: 7.62 },
+    DIP20: { pins: 20, pinPitch: 2.54, bodyLength: 25.40, bodyWidth: 7.62 },
+    DIP22: { pins: 22, pinPitch: 2.54, bodyLength: 27.94, bodyWidth: 7.62 },
+    DIP24: { pins: 24, pinPitch: 2.54, bodyLength: 30.48, bodyWidth: 7.62 },
+    DIP28: { pins: 28, pinPitch: 2.54, bodyLength: 35.56, bodyWidth: 7.62 },
+    DIP32: { pins: 32, pinPitch: 2.54, bodyLength: 40.64, bodyWidth: 7.62 },
+    DIP36: { pins: 36, pinPitch: 2.54, bodyLength: 45.72, bodyWidth: 7.62 },
+    DIP40: { pins: 40, pinPitch: 2.54, bodyLength: 50.80, bodyWidth: 15.24 },
+    DIP48: { pins: 48, pinPitch: 2.54, bodyLength: 58.42, bodyWidth: 15.24 }
 };
 
 

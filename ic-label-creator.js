@@ -22,7 +22,6 @@
     /** @typedef {{
      * pageWidth:number,
      *  pageHeight:number,
-     *  pinDistance:number,
      *  heightSizeAdjust:number,
      *  chipPositionX:number,
      *  chipPositionY:number,
@@ -35,13 +34,13 @@
      *  pinFontFamily?:string
      * }} RenderConfig */
     /** @typedef {{defaultChipLogicFamily:string, defaultChipSeries:string}} ChipNameDefaults */
-    /** @typedef {{ pins:number, pinPitch:number, rowSpacing?:number, bodyLength?:number, bodyWidth?:number }} Package */
+    /** @typedef {{ pins:number, pinPitch:number, bodyLength:number, bodyWidth:number }} Package */
     /** @typedef {Record<string, Package>} PackageRegistry */
     /** @typedef {'gate'|'flipflop'|'demux'|'mux'|'counter'|'register'|'ram'|'sram'|'eeprom'|'buffer'|'bus-transceiver'|'cpu'|'via'|'acia'|'analog'|'adder'} ChipType */
     /** @typedef {'input'|'output'|'bidirectional'} PinDirection */
     /** @typedef {'power'|'ground'|'address'|'data'|'clock'|'chip-select'|'reset'|'enable'|'interrupt'|'nc'|'other'} PinType */
     /** @typedef {[string, PinDirection, PinType]} PinSpec */
-    /** @typedef {{ description:string, type:ChipType, package?:string, pins: Record<string, string | PinSpec> }} Chip */
+    /** @typedef {{ description:string, type:ChipType, package:string, pins: Record<string, string | PinSpec> }} Chip */
     /** @typedef {Record<string, Chip>} ChipRegistry */
     /** @typedef {Window & { chips?: ChipRegistry, packages?: PackageRegistry }} ICWindow */
     /** @typedef {'top'|'bottom'} PinSide */
@@ -426,18 +425,34 @@
             return;
         }
 
-        // Resolve package information (from chips.js)
+        // Validate chip specifies a package
         const pkgName = chip.package;
-        const pkg = W.packages?.[pkgName ?? ''];
+        if (!pkgName) {
+            alert(`Error: chip "${chipName}" does not specify a package. All chips must reference a package. Please check chips.js.`);
+            return;
+        }
 
-        // Validate package exists if referenced
-        if (pkgName && !pkg) {
+        // Validate package exists
+        const pkg = W.packages?.[pkgName];
+        if (!pkg) {
             alert(`Error: chip "${chipName}" references unknown package "${pkgName}". Please check chips.js.`);
             return;
         }
 
-        // Calculate chip dimensions using package dimensions when available
-        const numPins = pkg?.pins ?? Object.keys(chip.pins).length;
+        // Validate package is fully defined with all required properties
+        const missingProps = [];
+        if (typeof pkg.pins !== 'number') missingProps.push('pins');
+        if (typeof pkg.pinPitch !== 'number') missingProps.push('pinPitch');
+        if (typeof pkg.bodyLength !== 'number') missingProps.push('bodyLength');
+        if (typeof pkg.bodyWidth !== 'number') missingProps.push('bodyWidth');
+        
+        if (missingProps.length > 0) {
+            alert(`Error: package "${pkgName}" is missing required properties: ${missingProps.join(', ')}. Please check chips.js.`);
+            return;
+        }
+
+        // Calculate chip dimensions using package dimensions
+        const numPins = pkg.pins;
         
         // Validate pin count
         if (numPins <= 0) {
@@ -449,14 +464,9 @@
             return;
         }
         
-        const pitch = pkg?.pinPitch ?? config.pinDistance;
-        const chipWidth = pkg?.bodyLength ?? Math.max(pitch, ((numPins / 2 - 1) * pitch));
-
-        // Determine base body width from package (prefer bodyWidth, fall back to rowSpacing), else default 7.62mm
-        const baseBodyWidth = (typeof pkg?.bodyWidth === 'number') ? pkg.bodyWidth
-            : (typeof pkg?.rowSpacing === 'number') ? pkg.rowSpacing
-                : 7.62;
-        const chipHeightRaw = baseBodyWidth;
+        const pitch = pkg.pinPitch;
+        const chipWidth = pkg.bodyLength;
+        const chipHeightRaw = pkg.bodyWidth;
         const chipHeight = Math.max(1, chipHeightRaw - (config.heightSizeAdjust ?? 0));
 
         const svgChip = createSVGElement('svg', {
@@ -592,7 +602,6 @@
     class ICLabelsElement extends HTMLElement {
         /** @type {'A4'|'Letter'} */ _paper = 'Letter';
         /** @type {Margins} */ _margins = { ...CONFIG.DEFAULT_MARGINS };
-        /** @type {number} */ _pinDistance = 2.54;
         /** @type {number} */ _heightSizeAdjust = 0;
         /** @type {number} */ _svgStrokeWidth = 0.1;
         /** @type {number} */ _svgStrokeOffset = 0.1;
@@ -611,7 +620,7 @@
         static get observedAttributes() {
             return [
                 'paper', 'margins',
-                'pindistance', 'heightsizeadjust', 'svgstrokewidth', 'svgstrokeoffset',
+                'heightsizeadjust', 'svgstrokewidth', 'svgstrokeoffset',
                 'defaultchiplogicfamily', 'defaultchipseries', 'pincolor', 'chipcolor', 'pinfontfamily',
             ];
         }
@@ -625,7 +634,6 @@
             const handlers = {
                 paper: () => { this._paper = (newVal === 'A4' ? 'A4' : 'Letter'); },
                 margins: () => { this._margins = parseMargins(newVal, this._margins); },
-                pindistance: () => { const v = parseNum(newVal); if (v !== null) this._pinDistance = v; },
                 heightsizeadjust: () => { const v = parseNum(newVal); if (v !== null) this._heightSizeAdjust = v; },
                 svgstrokewidth: () => { const v = parseNum(newVal); if (v !== null) this._svgStrokeWidth = v; },
                 svgstrokeoffset: () => { const v = parseNum(newVal); if (v !== null) this._svgStrokeOffset = v; },
@@ -670,7 +678,6 @@
                 if (v === 'true' || v === '1' || v === 'yes') return true;
                 return d;
             };
-            this._pinDistance = n(readAttr('pinDistance'), this._pinDistance);
             this._heightSizeAdjust = n(readAttr('heightSizeAdjust'), this._heightSizeAdjust);
             this._svgStrokeWidth = n(readAttr('svgStrokeWidth'), this._svgStrokeWidth);
             this._svgStrokeOffset = n(readAttr('svgStrokeOffset'), this._svgStrokeOffset);
@@ -753,7 +760,6 @@
             const config = {
                 pageWidth: contentW,
                 pageHeight: contentH,
-                pinDistance: this._pinDistance,
                 heightSizeAdjust: this._heightSizeAdjust,
                 chipPositionX: 0,
                 chipPositionY: 0,
