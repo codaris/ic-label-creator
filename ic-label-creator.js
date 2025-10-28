@@ -18,7 +18,15 @@
 
     /** @typedef {{w:number, h:number, css:string}} PagePreset */
     /** @typedef {{top:number, right:number, bottom:number, left:number}} Margins */
-    /** @typedef {{paper:'A4'|'Letter', margins:Margins, zoom:number}} UIState */
+    /**
+     * @typedef {Object} UIState
+     * @property {'A4'|'Letter'} paper
+     * @property {Margins} margins
+     * @property {number} zoom
+     * @property {number} heightAdjust
+     * @property {boolean} pinColor
+     * @property {boolean} chipColor
+     */
     /** @typedef {{
      * pageWidth:number,
      *  pageHeight:number,
@@ -123,6 +131,7 @@
             .toolbar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; padding: .75rem 1rem; }
             .toolbar label { font-size: .9rem; color: #333; }
             .toolbar input[type="number"]{ width: 6rem; }
+            .toolbar input[type="number"], .toolbar input[type="checkbox"] { margin-right: 0.2rem; }
             .toolbar .group { display: flex; gap: .5rem; align-items: center; }
             .toolbar .spacer { flex: 1; }
             ic-labels { flex: 1; overflow: auto; }
@@ -445,7 +454,7 @@
         if (typeof pkg.pinPitch !== 'number') missingProps.push('pinPitch');
         if (typeof pkg.bodyLength !== 'number') missingProps.push('bodyLength');
         if (typeof pkg.bodyWidth !== 'number') missingProps.push('bodyWidth');
-        
+
         if (missingProps.length > 0) {
             alert(`Error: package "${pkgName}" is missing required properties: ${missingProps.join(', ')}. Please check chips.js.`);
             return;
@@ -453,7 +462,7 @@
 
         // Calculate chip dimensions using package dimensions
         const numPins = pkg.pins;
-        
+
         // Validate pin count
         if (numPins <= 0) {
             alert(`Error: chip "${chipName}" has no pins defined. Please check chips.js.`);
@@ -463,11 +472,11 @@
             alert(`Error: chip "${chipName}" has odd number of pins (${numPins}). DIP chips must have even pin count.`);
             return;
         }
-        
+
         const pitch = pkg.pinPitch;
         const chipWidth = pkg.bodyLength;
         const chipHeightRaw = pkg.bodyWidth;
-        const chipHeight = Math.max(1, chipHeightRaw - (config.heightSizeAdjust ?? 0));
+        const chipHeight = Math.max(1, chipHeightRaw + (config.heightSizeAdjust ?? 0));
 
         const svgChip = createSVGElement('svg', {
             width: chipWidth + 'mm',
@@ -634,17 +643,23 @@
             const handlers = {
                 paper: () => { this._paper = (newVal === 'A4' ? 'A4' : 'Letter'); },
                 margins: () => { this._margins = parseMargins(newVal, this._margins); },
-                heightsizeadjust: () => { const v = parseNum(newVal); if (v !== null) this._heightSizeAdjust = v; },
+                heightsizeadjust: () => {
+                    let v = parseNum(newVal);
+                    if (v === null || v > 0) v = 0;
+                    this._heightSizeAdjust = v;
+                },
                 svgstrokewidth: () => { const v = parseNum(newVal); if (v !== null) this._svgStrokeWidth = v; },
                 svgstrokeoffset: () => { const v = parseNum(newVal); if (v !== null) this._svgStrokeOffset = v; },
                 defaultchiplogicfamily: () => { this._defaultChipLogicFamily = String(newVal || 'LS'); },
                 defaultchipseries: () => { this._defaultChipSeries = String(newVal || '74'); },
                 pincolor: () => {
                     const s = (newVal ?? '').toLowerCase();
+                    if (!newVal) { this._pinColor = true; return; }
                     this._pinColor = !(s === 'false' || s === '0' || s === 'no');
                 },
                 chipcolor: () => {
                     const s = (newVal ?? '').toLowerCase();
+                    if (!newVal) { this._chipColor = true; return; }
                     this._chipColor = !(s === 'false' || s === '0' || s === 'no');
                 },
                 pinfontfamily: () => {
@@ -889,8 +904,8 @@
         if (extendsAttr) {
             const baseChip = chipRegistry[extendsAttr];
             if (!baseChip) {
-                 alert(`Error: cannot extend unknown chip: ${extendsAttr}`);
-                 return null;
+                alert(`Error: cannot extend unknown chip: ${extendsAttr}`);
+                return null;
             }
 
             // Clone base chip
@@ -924,8 +939,8 @@
             const packageRegistry = W.packages || {};
             const pkg = packageRegistry[packageAttr];
             if (!pkg) {
-                 alert(`Error: unknown package: ${packageAttr}`);
-                 return null;
+                alert(`Error: unknown package: ${packageAttr}`);
+                return null;
             }
 
             const totalPins = pkg.pins;
@@ -986,10 +1001,25 @@
 
                     <div class="group">
                         <label><strong>Margins (mm)</strong></label>
-                        <label>Top <input id="marginTop" type="number" min="0" step="0.1" value="10"></label>
-                        <label>Right <input id="marginRight" type="number" min="0" step="0.1" value="10"></label>
-                        <label>Bottom <input id="marginBottom" type="number" min="0" step="0.1" value="10"></label>
-                        <label>Left <input id="marginLeft" type="number" min="0" step="0.1" value="10"></label>
+                        <label>Top <input id="marginTop" type="number" min="0" step="0.1" value="10" style="width:3.5rem"></label>
+                        <label>Right <input id="marginRight" type="number" min="0" step="0.1" value="10" style="width:3.5rem"></label>
+                        <label>Bottom <input id="marginBottom" type="number" min="0" step="0.1" value="10" style="width:3.5rem"></label>
+                        <label>Left <input id="marginLeft" type="number" min="0" step="0.1" value="10" style="width:3.5rem"></label>
+                    </div>
+
+                    <div class="group">
+                        <label for="heightAdjust"><strong>Height Adjust</strong></label>
+                        <input id="heightAdjust" type="number" min="-10" max="0" step="0.1" value="0" style="width:4rem" title="Adjust chip height (mm)">
+                    </div>
+
+                    <div class="group">
+                        <label for="pinColor"><strong>Pin Color</strong></label>
+                        <input id="pinColor" type="checkbox" checked>
+                    </div>
+
+                    <div class="group">
+                        <label for="chipColor"><strong>Chip Color</strong></label>
+                        <input id="chipColor" type="checkbox" checked>
                     </div>
 
                     <div class="group">
@@ -1035,6 +1065,9 @@
             marginRight: /** @type {HTMLInputElement} */ (toolbar.querySelector('#marginRight')),
             marginBottom: /** @type {HTMLInputElement} */ (toolbar.querySelector('#marginBottom')),
             marginLeft: /** @type {HTMLInputElement} */ (toolbar.querySelector('#marginLeft')),
+            heightAdjust: /** @type {HTMLInputElement} */ (toolbar.querySelector('#heightAdjust')),
+            pinColor: /** @type {HTMLInputElement} */ (toolbar.querySelector('#pinColor')),
+            chipColor: /** @type {HTMLInputElement} */ (toolbar.querySelector('#chipColor')),
             zoom: /** @type {HTMLInputElement} */ (toolbar.querySelector('#zoomRange')),
             zoomIn: /** @type {HTMLButtonElement} */ (toolbar.querySelector('#zoomIn')),
             zoomOut: /** @type {HTMLButtonElement} */ (toolbar.querySelector('#zoomOut')),
@@ -1044,41 +1077,64 @@
         };
 
         // State management
-        function readState() /** @type {UIState} */ {
+        /**
+         * @returns {UIState}
+         */
+        function readState() {
             return {
-                paper: (controls.paper.value === 'A4' ? 'A4' : 'Letter'),
+                paper: controls.paper.value === 'A4' ? 'A4' : 'Letter',
                 margins: {
                     top: parseFloat(controls.marginTop.value) || 0,
                     right: parseFloat(controls.marginRight.value) || 0,
                     bottom: parseFloat(controls.marginBottom.value) || 0,
                     left: parseFloat(controls.marginLeft.value) || 0,
                 },
+                heightAdjust: Math.min(0, parseFloat(controls.heightAdjust.value) || 0),
+                pinColor: !!controls.pinColor.checked,
+                chipColor: !!controls.chipColor.checked,
                 zoom: parseFloat(controls.zoom.value) || 1,
             };
         }
 
-        function writeState(/** @type {UIState} */ state) {
+        /**
+         * @param {UIState} state
+         */
+        function writeState(state) {
             controls.paper.value = state.paper;
             controls.marginTop.value = String(state.margins.top);
             controls.marginRight.value = String(state.margins.right);
             controls.marginBottom.value = String(state.margins.bottom);
             controls.marginLeft.value = String(state.margins.left);
+            controls.heightAdjust.value = String(state.heightAdjust ?? 0);
+            controls.pinColor.checked = !!state.pinColor;
+            controls.chipColor.checked = !!state.chipColor;
             controls.zoom.value = String(state.zoom);
             controls.zoomDisplay.textContent = Math.round(state.zoom * 100) + '%';
         }
 
-        function applyState(/** @type {UIState} */ state) {
+        /**
+         * @param {UIState} state
+         */
+        function applyState(state) {
             labelsElement.setAttribute('paper', state.paper);
-            labelsElement.setAttribute('margins',
-                `${state.margins.top} ${state.margins.right} ${state.margins.bottom} ${state.margins.left}`);
-      /** @type {HTMLElement} */ (labelsElement).style.setProperty('--ic-zoom', String(state.zoom));
+            labelsElement.setAttribute('margins', `${state.margins.top} ${state.margins.right} ${state.margins.bottom} ${state.margins.left}`);
+            labelsElement.setAttribute('heightSizeAdjust', String(state.heightAdjust ?? 0));
+            labelsElement.setAttribute('pinColor', state.pinColor ? 'true' : 'false');
+            labelsElement.setAttribute('chipColor', state.chipColor ? 'true' : 'false');
+            (labelsElement instanceof HTMLElement ? labelsElement : /** @type {HTMLElement} */(labelsElement)).style.setProperty('--ic-zoom', String(state.zoom));
         }
 
-        function saveState(/** @type {UIState} */ state) {
+        /**
+         * @param {UIState} state
+         */
+        function saveState(state) {
             localStorage.setItem(CONFIG.LOCALSTORAGE_KEY, JSON.stringify(state));
         }
 
-        function loadState() /** @type {UIState|null} */ {
+        /**
+         * @returns {UIState|null}
+         */
+        function loadState() {
             try {
                 const raw = localStorage.getItem(CONFIG.LOCALSTORAGE_KEY);
                 return raw ? JSON.parse(raw) : null;
@@ -1088,19 +1144,26 @@
         }
 
         // Initialize from saved state or component attributes
-        const initialState = (function () /** @type {UIState} */ {
+        const initialState /** @type {UIState} */ = (function () {
             const saved = loadState();
             if (saved && (saved.paper || saved.margins || saved.zoom)) {
+                // Ensure paper is 'A4' or 'Letter'
+                saved.paper = saved.paper === 'A4' ? 'A4' : 'Letter';
                 return saved;
             }
-
             // Fall back to component attributes
             const paperAttr = labelsElement.getAttribute('paper') === 'A4' ? 'A4' : 'Letter';
             const margins = parseMargins(labelsElement.getAttribute('margins'), CONFIG.DEFAULT_MARGINS);
-
+            let heightAdjust = parseFloat(labelsElement.getAttribute('heightSizeAdjust') ?? '0') || 0;
+            if (isNaN(heightAdjust) || heightAdjust > 0) heightAdjust = 0;
+            const pinColor = (labelsElement.getAttribute('pinColor') ?? 'true') !== 'false';
+            const chipColor = (labelsElement.getAttribute('chipColor') ?? 'true') !== 'false';
             return {
-                paper: paperAttr,
+                paper: /** @type {'A4'|'Letter'} */ (paperAttr === 'A4' ? 'A4' : 'Letter'),
                 margins,
+                heightAdjust,
+                pinColor,
+                chipColor,
                 zoom: CONFIG.DEFAULT_ZOOM,
             };
         })();
@@ -1110,7 +1173,16 @@
 
         // Event handlers
         function handleChange() {
-            const state = readState();
+            const stateRaw = readState();
+            // Ensure paper is 'A4' or 'Letter'
+            const state = {
+                ...stateRaw,
+                paper: stateRaw.paper === 'A4' ? 'A4' : 'Letter',
+            };
+            // Reflect clamped value back into the UI for heightAdjust
+            if (controls.heightAdjust.value !== String(state.heightAdjust)) {
+                controls.heightAdjust.value = String(state.heightAdjust);
+            }
             applyState(/** @type {UIState} */(state));
             saveState(/** @type {UIState} */(state));
         }
@@ -1120,12 +1192,15 @@
         controls.marginRight.addEventListener('input', handleChange);
         controls.marginBottom.addEventListener('input', handleChange);
         controls.marginLeft.addEventListener('input', handleChange);
+        controls.heightAdjust.addEventListener('input', handleChange);
+        controls.pinColor.addEventListener('change', handleChange);
+        controls.chipColor.addEventListener('change', handleChange);
 
         controls.zoom.addEventListener('input', () => {
             const state = readState();
             controls.zoomDisplay.textContent = Math.round(state.zoom * 100) + '%';
-            applyState(/** @type {UIState} */(state));
-            saveState(/** @type {UIState} */(state));
+            applyState(state);
+            saveState(state);
         });
 
         controls.zoomIn.addEventListener('click', () => {
@@ -1141,9 +1216,12 @@
         });
 
         controls.reset.addEventListener('click', () => {
-            const defaultState /** @type {UIState} */ = {
-                paper: /** @type {'Letter'} */ ('Letter'),
+            const defaultState = {
+                paper: /** @type {'A4'|'Letter'} */('Letter'),
                 margins: { ...CONFIG.DEFAULT_MARGINS },
+                heightAdjust: 0,
+                pinColor: true,
+                chipColor: true,
                 zoom: CONFIG.DEFAULT_ZOOM,
             };
             writeState(defaultState);
