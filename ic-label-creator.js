@@ -516,7 +516,7 @@
 
         const labelTextEl = createSVGElement('text', {
             x: '50%',
-            y: chipHeight / 2 + 'mm',
+            y: (chipHeight / 2 + 0.4) + 'mm',
             'dominant-baseline': 'middle',
             'text-anchor': 'middle',
             'font-family': "'Roboto Condensed', 'Arial Narrow', 'Nimbus Sans Narrow', Arial, Helvetica, sans-serif",
